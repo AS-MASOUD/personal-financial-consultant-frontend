@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0f172a;
+  --primary-foreground: #f8fafc;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #0f172a;
+  --radius: 0.75rem;
+
+  /* Financial Semantic Tokens */
+  --finance-gain: #10b981;
+  --finance-gain-subtle: #ecfdf5;
+  --finance-loss: #f43f5e;
+  --finance-loss-subtle: #fff1f2;
+  --finance-warning: #f59e0b;
+  --finance-warning-subtle: #fffbeb;
+  --finance-neutral: #64748b;
+  --finance-neutral-subtle: #f8fafc;
+  --finance-brand: #3b82f6;
+}
+
+.dark {
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --card: #111827;
+  --card-foreground: #f8fafc;
+  --popover: #111827;
+  --popover-foreground: #f8fafc;
+  --primary: #f8fafc;
+  --primary-foreground: #090d16;
+  --secondary: #1f2937;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #f43f5e;
+  --destructive-foreground: #f8fafc;
+  --border: #1f293d;
+  --input: #1f293d;
+  --ring: #38bdf8;
+
+  /* Financial Semantic Tokens Dark */
+  --finance-gain: #34d399;
+  --finance-gain-subtle: rgba(16, 185, 129, 0.12);
+  --finance-loss: #fb7185;
+  --finance-loss-subtle: rgba(244, 63, 94, 0.12);
+  --finance-warning: #fbbf24;
+  --finance-warning-subtle: rgba(245, 158, 11, 0.12);
+  --finance-neutral: #94a3b8;
+  --finance-neutral-subtle: rgba(148, 163, 184, 0.08);
+  --finance-brand: #60a5fa;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+}
+
+/* Custom Financial Card Elevation */
+.fin-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fin-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* Clean Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 9999px;
+  opacity: 0.3;
+}
