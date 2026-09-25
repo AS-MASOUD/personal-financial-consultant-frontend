@@ -4,8 +4,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Personal FC — Financial Command Center",
-  description: "Advanced personal wealth tracking, portfolio analytics, and investment management operating system.",
+  title: "Personal FC — سامانه جامع مدیریت مالی و سرمایه‌گذاری",
+  description: "مرکز فرماندهی پیشرفته مدیریت دارایی‌ها، تحلیل پورتفولیو، رصد بودجه و جریان نقدینگی شخصی.",
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
       <body className="antialiased">
         <Providers>
           <AppShell>{children}</AppShell>

@@ -7,10 +7,19 @@ import {
   Building,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
+
+const LIABILITY_LABELS: Record<string, string> = {
+  mortgage: "وام مسکن",
+  auto_loan: "وام خودرو",
+  student_loan: "وام تحصیلی",
+  credit_card: "کارت اعتباری",
+  personal_loan: "تسهیلات بانکی شخصی",
+};
 
 export default function LiabilitiesPage() {
   const [activeTab, setActiveTab] = useState<"loans" | "calculator">("loans");
+  const { formatMoney } = useCurrency();
 
   // Calculator inputs
   const [calcPrincipal, setCalcPrincipal] = useState("250000");
@@ -49,10 +58,10 @@ export default function LiabilitiesPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            Liabilities & Debt Management
+            مدیریت بدهی‌ها و تعهدات مالی
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Mortgages, auto loans, and deterministic amortization schedules
+            تسهیلات بانکی، وام‌های مسکن و خودرو و شبیه‌ساز استهلاک بدهی
           </p>
         </div>
 
@@ -65,7 +74,7 @@ export default function LiabilitiesPage() {
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
-            Active Obligations
+            تعهدات و وام‌های فعال
           </button>
           <button
             onClick={() => setActiveTab("calculator")}
@@ -76,7 +85,7 @@ export default function LiabilitiesPage() {
             }`}
           >
             <Calculator className="h-3.5 w-3.5" />
-            <span>Amortization Engine</span>
+            <span>محاسبه‌گر اقساط و استهلاک</span>
           </button>
         </div>
       </div>
@@ -85,35 +94,35 @@ export default function LiabilitiesPage() {
         <>
           {/* Top Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="fin-card p-5">
+            <div className="fin-card p-5 border-s-4 border-s-rose-500">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Total Outstanding Debt
+                کل بدهی‌های تسویه‌نشده
               </span>
-              <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-2">
-                {formatCurrency(totalDebt)}
+              <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-2 font-mono">
+                {formatMoney(totalDebt)}
               </div>
               <span className="text-xs text-slate-400 mt-1 block">
-                Across {liabilities?.length || 0} loan accounts
+                در {liabilities?.length || 0} فقره بدهی و وام ثبت‌شده
               </span>
             </div>
 
-            <div className="fin-card p-5">
+            <div className="fin-card p-5 border-s-4 border-s-sky-500">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Monthly Debt Commitment
+                تعهد پرداخت اقساط ماهانه
               </span>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
-                {formatCurrency(totalMonthlyCommitment)}
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2 font-mono">
+                {formatMoney(totalMonthlyCommitment)}
               </div>
               <span className="text-xs text-slate-400 mt-1 block">
-                Fixed monthly principal & interest
+                مجموع اقساط ثابت اصل و سود هر ماه
               </span>
             </div>
 
-            <div className="fin-card p-5">
+            <div className="fin-card p-5 border-s-4 border-s-amber-500">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Weighted Average APR
+                میانگین وزنی نرخ سود وام‌ها
               </span>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2 font-mono">
                 {liabilities && liabilities.length > 0
                   ? `${(
                       liabilities.reduce(
@@ -126,7 +135,7 @@ export default function LiabilitiesPage() {
                   : "0.00%"}
               </div>
               <span className="text-xs text-slate-400 mt-1 block">
-                Effective borrowing cost
+                هزینه مؤثر سالانه استقراض (APR)
               </span>
             </div>
           </div>
@@ -144,17 +153,17 @@ export default function LiabilitiesPage() {
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase">
-                        {l.liability_type.replace("_", " ")}
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        {LIABILITY_LABELS[l.liability_type.toLowerCase()] || l.liability_type}
                       </span>
                       <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        className={`text-xs font-bold px-2 py-0.5 rounded-full font-mono ${
                           isHighRate
                             ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
                             : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
                         }`}
                       >
-                        {parseFloat(l.interest_rate_percent).toFixed(2)}% APR
+                        {parseFloat(l.interest_rate_percent).toFixed(2)}% سود سالانه
                       </span>
                     </div>
 
@@ -171,12 +180,12 @@ export default function LiabilitiesPage() {
 
                   {/* Balance & Repayment Progress */}
                   <div className="space-y-2">
-                    <div className="flex items-baseline justify-between">
+                    <div className="flex items-baseline justify-between font-mono">
                       <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                        {formatCurrency(l.current_balance)}
+                        {formatMoney(l.current_balance)}
                       </span>
                       <span className="text-xs text-slate-400">
-                        of {formatCurrency(l.original_principal)}
+                        از {formatMoney(l.original_principal)}
                       </span>
                     </div>
 
@@ -187,18 +196,18 @@ export default function LiabilitiesPage() {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>{repaidPct.toFixed(1)}% Principal Repaid</span>
-                      <span>{formatCurrency(l.repaid_amount)} paid</span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                      <span>{repaidPct.toFixed(1)}% از اصل وام تسویه شده</span>
+                      <span>{formatMoney(l.repaid_amount)} پرداخت‌شده</span>
                     </div>
                   </div>
 
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                     <span className="text-slate-500 dark:text-slate-400">
-                      Payment Commitment:
+                      تعهد قسط ماهانه:
                     </span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">
-                      {formatCurrency(l.monthly_payment)}/mo
+                    <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {formatMoney(l.monthly_payment)} / ماه
                     </span>
                   </div>
                 </div>
@@ -211,44 +220,44 @@ export default function LiabilitiesPage() {
         <div className="space-y-6">
           <div className="fin-card p-6">
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">
-              Loan Parameter Simulator
+              شبیه‌ساز و پارامترهای استهلاک وام
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Principal Balance ($)
+                  مبلغ اصل وام ($ پایه)
                 </label>
                 <input
                   type="number"
                   value={calcPrincipal}
                   onChange={(e) => setCalcPrincipal(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold font-mono"
                 />
               </div>
 
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Annual Interest Rate (% APR)
+                  نرخ سود سالانه (% APR)
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   value={calcRate}
                   onChange={(e) => setCalcRate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold font-mono"
                 />
               </div>
 
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Term Length (Months)
+                  مدت بازپرداخت (تعداد ماه)
                 </label>
                 <input
                   type="number"
                   value={calcTerm}
                   onChange={(e) => setCalcTerm(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold font-mono"
                 />
               </div>
             </div>
@@ -259,42 +268,42 @@ export default function LiabilitiesPage() {
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Amortization Breakdown (First 24 Months)
+                  جدول تفکیک اقساط (۲۴ ماه نخست)
                 </h4>
-                <p className="text-xs text-slate-400">
-                  Monthly payment: {schedule && schedule[0] ? formatCurrency(schedule[0].payment) : "$0.00"}
+                <p className="text-xs text-slate-400 mt-0.5">
+                  مبلغ هر قسط ماهانه: {schedule && schedule[0] ? formatMoney(schedule[0].payment) : "—"}
                 </p>
               </div>
             </div>
 
             <div className="overflow-x-auto max-h-[400px]">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-start text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 uppercase tracking-wider sticky top-0 border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="py-2.5 px-6 font-semibold">Month</th>
-                    <th className="py-2.5 px-4 font-semibold text-right">Payment</th>
-                    <th className="py-2.5 px-4 font-semibold text-right">Principal</th>
-                    <th className="py-2.5 px-4 font-semibold text-right">Interest</th>
-                    <th className="py-2.5 px-6 font-semibold text-right">Remaining Balance</th>
+                    <th className="py-2.5 px-6 font-semibold text-start">ماه</th>
+                    <th className="py-2.5 px-4 font-semibold text-end">مبلغ قسط</th>
+                    <th className="py-2.5 px-4 font-semibold text-end">پرداخت اصل وام</th>
+                    <th className="py-2.5 px-4 font-semibold text-end">پرداخت سود</th>
+                    <th className="py-2.5 px-6 font-semibold text-end">مانده بدهی</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                   {schedule?.slice(0, 36).map((row) => (
                     <tr key={row.month} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/30">
-                      <td className="py-2.5 px-6 font-medium text-slate-800 dark:text-slate-200">
-                        Month {row.month}
+                      <td className="py-2.5 px-6 font-medium text-slate-800 dark:text-slate-200 font-mono">
+                        ماه {row.month}
                       </td>
-                      <td className="py-2.5 px-4 text-right font-medium">
-                        {formatCurrency(row.payment)}
+                      <td className="py-2.5 px-4 text-end font-medium font-mono">
+                        {formatMoney(row.payment)}
                       </td>
-                      <td className="py-2.5 px-4 text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                        {formatCurrency(row.principal)}
+                      <td className="py-2.5 px-4 text-end text-emerald-600 dark:text-emerald-400 font-medium font-mono">
+                        {formatMoney(row.principal)}
                       </td>
-                      <td className="py-2.5 px-4 text-right text-rose-500 font-medium">
-                        {formatCurrency(row.interest)}
+                      <td className="py-2.5 px-4 text-end text-rose-500 font-medium font-mono">
+                        {formatMoney(row.interest)}
                       </td>
-                      <td className="py-2.5 px-6 text-right font-bold text-slate-900 dark:text-slate-100">
-                        {formatCurrency(row.remaining_balance)}
+                      <td className="py-2.5 px-6 text-end font-bold text-slate-900 dark:text-slate-100 font-mono">
+                        {formatMoney(row.remaining_balance)}
                       </td>
                     </tr>
                   ))}

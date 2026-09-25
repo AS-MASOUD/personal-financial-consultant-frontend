@@ -9,7 +9,7 @@ import {
   PiggyBank,
   Calendar,
   Clock,
-  ArrowRight,
+  ArrowLeft,
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,9 +17,10 @@ import { api } from "@/lib/api";
 import { MetricCard } from "@/components/financial/metric-card";
 import { AttentionBanner } from "@/components/financial/attention-banner";
 import { AllocationDonut, NetWorthChart } from "@/components/financial/financial-charts";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
 
 export default function OverviewDashboardPage() {
+  const { formatMoney } = useCurrency();
   const {
     data: overview,
     isLoading: isOverviewLoading,
@@ -63,17 +64,17 @@ export default function OverviewDashboardPage() {
       <div className="fin-card p-8 text-center max-w-lg mx-auto my-12 space-y-4">
         <ShieldAlert className="h-10 w-10 text-rose-500 mx-auto" />
         <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-          Unable to Load Financial Overview
+          خطا در دریافت اطلاعات مالی
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          {(overviewError as Error).message || "Database connection or backend service is unreachable."}
+          {(overviewError as Error).message || "ارتباط با پایگاه‌داده یا سرویس بک‌اند برقرار نشد."}
         </p>
         <button
           onClick={() => refetchOverview()}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition-all"
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          <span>Retry Loading</span>
+          <span>تلاش مجدد</span>
         </button>
       </div>
     );
@@ -91,28 +92,28 @@ export default function OverviewDashboardPage() {
       {/* 2. Top Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Total Net Worth"
+          title="ارزش خالص کل (Net Worth)"
           value={overview.net_worth}
           change={4.8}
-          changePeriod="vs last month"
+          changePeriod="نسبت به ماه گذشته"
           icon={Wallet}
         />
         <MetricCard
-          title="Total Assets"
+          title="مجموع دارایی‌ها"
           value={overview.total_assets}
-          subtitle={`Invested: ${formatCurrency(overview.invested_capital)}`}
+          subtitle={`سرمایه‌گذاری شده: ${formatMoney(overview.invested_capital)}`}
           icon={Building2}
         />
         <MetricCard
-          title="Total Liabilities"
+          title="مجموع بدهی‌ها و وام‌ها"
           value={overview.total_liabilities}
-          subtitle={`Monthly Debt Service: ${formatCurrency(overview.monthly_debt_service)}`}
+          subtitle={`اقساط ماهانه: ${formatMoney(overview.monthly_debt_service)}`}
           icon={ShieldAlert}
         />
         <MetricCard
-          title="Liquid Cash Buffer"
+          title="نقدینگی در دسترس"
           value={overview.liquid_cash}
-          subtitle="Checking, Savings & Cash"
+          subtitle="حساب‌های جاری، پس‌انداز و نقد"
           icon={PiggyBank}
         />
       </div>
@@ -134,55 +135,55 @@ export default function OverviewDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Monthly Cash Flow Architecture
+                معماری جریان نقدینگی ماهانه
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Net available surplus after living expenses and debt payments
+                مازاد خالص نقدینگی پس از کسر هزینه‌های جاری زندگی و اقساط وام‌ها
               </p>
             </div>
             <Link
               href="/cashflow"
               className="text-xs font-semibold text-sky-500 hover:text-sky-600 flex items-center gap-1"
             >
-              <span>Full Breakdown</span>
-              <ArrowRight className="h-3 w-3" />
+              <span>مشاهده تفکیک کامل</span>
+              <ArrowLeft className="h-3 w-3" />
             </Link>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-2">
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">
-                Income
+                کل درآمدها
               </span>
               <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                {formatCurrency(overview.monthly_income)}
+                {formatMoney(overview.monthly_income)}
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">
-                Expenses
+                کل مخارج
               </span>
               <div className="text-base font-bold text-rose-600 dark:text-rose-400 mt-1">
-                {formatCurrency(overview.monthly_expenses)}
+                {formatMoney(overview.monthly_expenses)}
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">
-                Debt Service
+                اقساط وام‌ها
               </span>
               <div className="text-base font-bold text-amber-600 dark:text-amber-400 mt-1">
-                {formatCurrency(overview.monthly_debt_service)}
+                {formatMoney(overview.monthly_debt_service)}
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase">
-                Free Surplus
+                پس‌انداز مازاد
               </span>
               <div className="text-base font-bold text-sky-600 dark:text-sky-400 mt-1">
-                {formatCurrency(overview.monthly_free_cashflow)}
+                {formatMoney(overview.monthly_free_cashflow)}
               </div>
             </div>
           </div>
@@ -190,7 +191,7 @@ export default function OverviewDashboardPage() {
           {/* Quick Cash Flow Progress Visualizer */}
           <div className="mt-4 space-y-1.5">
             <div className="flex justify-between text-xs text-slate-500 font-medium">
-              <span>Cash Flow Utilization</span>
+              <span>نرخ بهره‌برداری از درآمد</span>
               <span>
                 {parseFloat(overview.monthly_income) > 0
                   ? `${(
@@ -198,7 +199,7 @@ export default function OverviewDashboardPage() {
                         parseFloat(overview.monthly_debt_service)) /
                         parseFloat(overview.monthly_income)) *
                       100
-                    ).toFixed(1)}% of income utilized`
+                    ).toFixed(1)}% از درآمد مصرف شده`
                   : "0%"}
               </span>
             </div>
@@ -217,7 +218,7 @@ export default function OverviewDashboardPage() {
                       : 0
                   }%`,
                 }}
-                title="Expenses"
+                title="مخارج"
               />
               <div
                 className="bg-amber-500 h-full transition-all"
@@ -233,25 +234,25 @@ export default function OverviewDashboardPage() {
                       : 0
                   }%`,
                 }}
-                title="Debt Payments"
+                title="اقساط بدهی"
               />
               <div
                 className="bg-emerald-500 h-full transition-all flex-1"
-                title="Free Surplus"
+                title="پس‌انداز مازاد"
               />
             </div>
             <div className="flex items-center gap-4 text-[10px] text-slate-400 pt-1">
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-rose-500" />
-                <span>Living Expenses</span>
+                <span>هزینه‌های زندگی</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-amber-500" />
-                <span>Debt Service</span>
+                <span>اقساط بدهی</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span>Free Investable Surplus</span>
+                <span>مازاد آزاد قابل سرمایه‌گذاری</span>
               </div>
             </div>
           </div>
@@ -262,10 +263,10 @@ export default function OverviewDashboardPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Upcoming Obligations
+                تعهدات و سررسیدهای پیش‌رو
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Next scheduled loan & debt payments
+                اقساط و پرداخت‌های آتی تسهیلات
               </p>
             </div>
             <Calendar className="h-4 w-4 text-slate-400" />
@@ -284,22 +285,22 @@ export default function OverviewDashboardPage() {
                     </span>
                     <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
                       <Clock className="h-3 w-3" />
-                      Due Day {ob.due_day} of each month
+                      سررسید روز {ob.due_day} هر ماه
                     </span>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left" dir="ltr">
                     <span className="font-bold text-slate-900 dark:text-slate-100">
-                      {formatCurrency(ob.monthly_payment)}
+                      {formatMoney(ob.monthly_payment)}
                     </span>
                     <span className="block text-[10px] text-slate-400">
-                      Bal: {formatCurrency(ob.remaining_balance)}
+                      مانده: {formatMoney(ob.remaining_balance)}
                     </span>
                   </div>
                 </div>
               ))
             ) : (
               <div className="text-center py-6 text-xs text-slate-400">
-                No active liabilities or debt obligations found.
+                تعهد بدهی یا اقساط فعالی ثبت نشده است.
               </div>
             )}
           </div>
@@ -309,8 +310,8 @@ export default function OverviewDashboardPage() {
               href="/liabilities"
               className="text-xs font-semibold text-sky-500 hover:text-sky-600 flex items-center justify-between"
             >
-              <span>Manage Liabilities & Amortization</span>
-              <ArrowRight className="h-3 w-3" />
+              <span>مدیریت تسهیلات و استهلاک وام</span>
+              <ArrowLeft className="h-3 w-3" />
             </Link>
           </div>
         </div>
@@ -321,18 +322,18 @@ export default function OverviewDashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-              Active Financial Goals
+              اهداف مالی و پس‌انداز فعال
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Progress tracking & projected milestone achievement
+              رصد پیشرفت و زمان‌بندی دستیابی به اهداف
             </p>
           </div>
           <Link
             href="/goals"
             className="text-xs font-semibold text-sky-500 hover:text-sky-600 flex items-center gap-1"
           >
-            <span>All Goals</span>
-            <ArrowRight className="h-3 w-3" />
+            <span>مشاهده همه اهداف</span>
+            <ArrowLeft className="h-3 w-3" />
           </Link>
         </div>
 
@@ -350,14 +351,14 @@ export default function OverviewDashboardPage() {
                       {goal.name}
                     </span>
                     <span className="text-[11px] font-bold text-sky-500">
-                      {pct.toFixed(0)}%
+                      %{pct.toFixed(0)}
                     </span>
                   </div>
 
                   <div className="mt-2 text-sm font-bold text-slate-900 dark:text-slate-100">
-                    {formatCurrency(goal.current_amount)}{" "}
+                    {formatMoney(goal.current_amount)}{" "}
                     <span className="text-xs font-normal text-slate-400">
-                      / {formatCurrency(goal.target_amount)}
+                      / {formatMoney(goal.target_amount)}
                     </span>
                   </div>
                 </div>
@@ -370,8 +371,8 @@ export default function OverviewDashboardPage() {
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>Target: {goal.target_date}</span>
-                    <span>+{formatCurrency(goal.monthly_contribution)}/mo</span>
+                    <span>موعد هدف: {goal.target_date}</span>
+                    <span>+{formatMoney(goal.monthly_contribution)}/ماه</span>
                   </div>
                 </div>
               </div>

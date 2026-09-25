@@ -12,9 +12,12 @@ import {
   Legend,
 } from "recharts";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
 
 export default function AnalyticsPage() {
+  const { formatMoney } = useCurrency();
+
   const { data: snapshots } = useQuery({
     queryKey: ["analytics-snapshots-full"],
     queryFn: () => api.getSnapshots(90),
@@ -55,21 +58,21 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-          Financial Analytics & Ratio Diagnostic
+          تحلیل‌های آماری و نسبت‌های سلامت مالی
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Balance sheet expansion, liquidity adequacy, and structural debt ratios
+          روند انبساط ترازنامه، کفایت نقدینگی و شاخص‌های ساختار بدهی
         </p>
       </div>
 
       {/* Financial Health Ratios */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-sky-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Debt-to-Asset Ratio
+            نسبت بدهی به دارایی
           </span>
           <div
-            className={`text-2xl font-bold mt-2 ${
+            className={`text-2xl font-bold mt-2 font-mono ${
               debtToAssetRatio > 50
                 ? "text-rose-600 dark:text-rose-400"
                 : "text-slate-900 dark:text-slate-100"
@@ -78,39 +81,39 @@ export default function AnalyticsPage() {
             {debtToAssetRatio.toFixed(1)}%
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            {debtToAssetRatio < 40 ? "Conservative leverage" : "Moderate leverage"}
+            {debtToAssetRatio < 40 ? "اهرم مالی محتاطانه و ایمن" : "اهرم مالی در حد متوسط"}
           </span>
         </div>
 
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-indigo-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Liquidity Buffer Ratio
+            شاخص بافر نقدینگی
           </span>
-          <div className="text-2xl font-bold text-sky-600 dark:text-sky-400 mt-2">
+          <div className="text-2xl font-bold text-sky-600 dark:text-sky-400 mt-2 font-mono">
             {liquidRatio.toFixed(1)}%
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Liquid cash as % of total capital
+            سهم نقدینگی در دسترس از کل دارایی‌ها
           </span>
         </div>
 
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-emerald-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Invested Capital Depth
+            عمق سرمایه‌گذاری مولد
           </span>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
             {(100 - liquidRatio).toFixed(1)}%
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Productive compounding assets
+            دارایی‌های زاینده با بهره مرکب
           </span>
         </div>
 
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-amber-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Monthly Debt Burden
+            سهم اقساط از درآمد (DTI)
           </span>
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
+          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2 font-mono">
             {overview && parseFloat(overview.monthly_income) > 0
               ? `${(
                   (parseFloat(overview.monthly_debt_service) /
@@ -120,7 +123,7 @@ export default function AnalyticsPage() {
               : "0%"}
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Debt-to-income (DTI) commitment
+            تعهد بازپرداخت بدهی نسبت به حقوق
           </span>
         </div>
       </div>
@@ -128,10 +131,10 @@ export default function AnalyticsPage() {
       {/* Dual Comparative Historical Chart */}
       <div className="fin-card p-5">
         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">
-          Balance Sheet Expansion (90-Day Trend)
+          انبساط ترازنامه مالی (روند ۹۰ روز گذشته)
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Comparing Total Assets vs Liabilities vs Net Worth progression
+          مقایسه تاریخی کل دارایی‌ها در برابر بدهی‌ها و ارزش خالص دارایی
         </p>
 
         <div className="h-[360px] w-full">
@@ -151,23 +154,23 @@ export default function AnalyticsPage() {
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
               />
               <Tooltip
-                formatter={(val: unknown) => [formatCurrency(Number(val)), ""]}
+                formatter={(val: unknown) => [formatMoney(Number(val)), ""]}
                 contentStyle={{
                   backgroundColor: "#0f172a",
                   borderColor: "#334155",
                   borderRadius: "0.75rem",
                   fontSize: "12px",
                   color: "#fff",
+                  direction: "rtl",
                 }}
               />
               <Legend />
               <Line
                 type="monotone"
                 dataKey="assets"
-                name="Total Assets"
+                name="کل دارایی‌ها"
                 stroke="#10b981"
                 strokeWidth={2}
                 dot={false}
@@ -175,7 +178,7 @@ export default function AnalyticsPage() {
               <Line
                 type="monotone"
                 dataKey="netWorth"
-                name="Net Worth"
+                name="ارزش خالص دارایی"
                 stroke="#0284c7"
                 strokeWidth={2.5}
                 dot={false}
@@ -183,7 +186,7 @@ export default function AnalyticsPage() {
               <Line
                 type="monotone"
                 dataKey="liabilities"
-                name="Total Liabilities"
+                name="کل بدهی‌ها"
                 stroke="#f43f5e"
                 strokeWidth={2}
                 dot={false}

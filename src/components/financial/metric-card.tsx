@@ -2,7 +2,8 @@
 
 import React from "react";
 import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
 
 interface MetricCardProps {
   title: string;
@@ -22,14 +23,15 @@ export function MetricCard({
   value,
   subtitle,
   change,
-  changePeriod = "vs last month",
+  changePeriod = "نسبت به ماه گذشته",
   isCurrency = true,
   currency = "USD",
   icon: Icon,
   variant = "default",
   className,
 }: MetricCardProps) {
-  const displayVal = isCurrency ? formatCurrency(value, currency) : value;
+  const { formatMoney } = useCurrency();
+  const displayVal = isCurrency ? formatMoney(value, currency) : value;
 
   const numChange = typeof change === "string" ? parseFloat(change) : change;
   const hasChange = numChange !== undefined && !isNaN(numChange);
@@ -38,9 +40,9 @@ export function MetricCard({
 
   const variantBorder = {
     default: "",
-    positive: "border-l-4 border-l-emerald-500",
-    negative: "border-l-4 border-l-rose-500",
-    warning: "border-l-4 border-l-amber-500",
+    positive: "border-s-4 border-s-emerald-500",
+    negative: "border-s-4 border-s-rose-500",
+    warning: "border-s-4 border-s-amber-500",
   }[variant];
 
   return (

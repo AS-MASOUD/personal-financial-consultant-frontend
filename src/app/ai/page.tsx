@@ -13,11 +13,11 @@ import {
 import { api } from "@/lib/api";
 
 const SUGGESTED_PROMPTS = [
-  "Explain my current financial position and net worth.",
-  "Where is most of my money concentrated?",
-  "Analyze my monthly cash flow and savings rate.",
-  "What liabilities should I prioritize paying off first?",
-  "Are my emergency fund cash reserves adequate?",
+  "وضعیت فعلی دارایی‌ها و ارزش خالص من را بررسی و خلاصه کن.",
+  "بیشترین تمرکز سرمایه و ریسک پورتفوی من کجاست؟",
+  "جریان نقدینگی و نرخ پس‌انداز ماهانه من را تحلیل کن.",
+  "کدام بدهی‌ها و وام‌ها را باید در اولویت تسویه قرار دهم؟",
+  "آیا ذخیره صندوق اضطراری و بافر نقدی من کافی است؟",
 ];
 
 export default function AIAssistantPage() {
@@ -32,7 +32,7 @@ export default function AIAssistantPage() {
     {
       role: "assistant",
       content:
-        "Welcome to your Financial Command Center Intelligence Layer. I can analyze your net worth, review asset concentration, diagnose debt structures, and simulate scenarios using deterministic backend calculations. How can I assist you today?",
+        "به هسته هوشمند مرکز مدیریت مالی شخصی خوش آمدید. من می‌توانم ارزش خالص دارایی‌ها، تمرکز ریسک سرمایه‌گذاری، ساختار اقساط بدهی و سناریوهای آینده مالی شما را با اتکا به موتور محاسباتی قطعی تحلیل کنم. امروز چطور می‌توانم کمکتان کنم؟",
     },
   ]);
 
@@ -66,16 +66,16 @@ export default function AIAssistantPage() {
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Bot className="h-5 w-5 text-indigo-500" />
-            <span>Financial AI Assistant</span>
+            <span>دستیار هوشمند و تحلیل‌گر مالی (AI)</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Natural language interpretation grounded in verified deterministic accounting rules
+            تحلیل هوشمند زبانی متصل به موتور محاسباتی و داده‌های حسابداری شما
           </p>
         </div>
 
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-xs font-semibold">
           <ShieldCheck className="h-3.5 w-3.5" />
-          <span>Deterministic Tool Guardrails</span>
+          <span>گاردریل‌های محاسباتی قطعی</span>
         </div>
       </div>
 
@@ -119,7 +119,7 @@ export default function AIAssistantPage() {
                 {!isUser && msg.tool_calls && (
                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20 mb-1">
                     <Wrench className="h-2.5 w-2.5" />
-                    <span>Tool Invoked: get_financial_overview()</span>
+                    <span>فراخوانی ابزار محاسباتی: get_financial_overview()</span>
                   </div>
                 )}
 
@@ -144,7 +144,7 @@ export default function AIAssistantPage() {
             </div>
             <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60">
               <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
-              <span>Querying verified accounting models & synthesizing analysis...</span>
+              <span>در حال فراخوانی مدل‌های حسابداری و پردازش پاسخ تحلیلی...</span>
             </div>
           </div>
         )}
@@ -160,7 +160,7 @@ export default function AIAssistantPage() {
       >
         <input
           type="text"
-          placeholder="Ask a financial question, request concentration analysis, or scenario review..."
+          placeholder="سؤال مالی خود را بپرسید، مثلاً: تحلیل جریان نقدینگی یا تمرکز پورتفوی..."
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           className="flex-1 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
@@ -171,7 +171,7 @@ export default function AIAssistantPage() {
           className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0"
         >
           <Send className="h-4 w-4" />
-          <span>Ask</span>
+          <span>ارسال</span>
         </button>
       </form>
     </div>

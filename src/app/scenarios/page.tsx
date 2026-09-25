@@ -13,9 +13,10 @@ import {
 } from "recharts";
 import { api } from "@/lib/api";
 import { ScenarioSimulationResponse } from "@/types/financial";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
 
 export default function ScenariosPage() {
+  const { formatMoney } = useCurrency();
   const [horizonMonths, setHorizonMonths] = useState(36);
   const [incomeDelta, setIncomeDelta] = useState("1000");
   const [expenseDelta, setExpenseDelta] = useState("-250");
@@ -54,7 +55,7 @@ export default function ScenariosPage() {
   const chartData = React.useMemo(() => {
     if (!result || !result.monthly_projections) return [];
     return result.monthly_projections.map((p) => ({
-      month: `M${p.month}`,
+      month: `ماه ${p.month}`,
       netWorth: parseFloat(p.projected_net_worth),
       liquid: parseFloat(p.projected_liquid_cash),
       liabilities: parseFloat(p.projected_liabilities),
@@ -66,10 +67,10 @@ export default function ScenariosPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            Interactive Financial Scenario Engine
+            موتور شبیه‌سازی سناریوهای مالی (What-If)
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Simulate life changes, career moves, new loans, and market returns with deterministic precision
+            شبیه‌سازی تغییرات زندگی، تسهیلات جدید، ارتقای درآمد و بازدهی دارایی‌ها با محاسبات قطعی ریاضی
           </p>
         </div>
 
@@ -79,7 +80,7 @@ export default function ScenariosPage() {
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50"
         >
           <Play className="h-3.5 w-3.5 fill-current" />
-          <span>{simulateMutation.isPending ? "Calculating..." : "Run Simulation"}</span>
+          <span>{simulateMutation.isPending ? "در حال محاسبه..." : "اجرای شبیه‌سازی"}</span>
         </button>
       </div>
 
@@ -88,14 +89,16 @@ export default function ScenariosPage() {
         <div className="fin-card p-5 space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <SlidersHorizontal className="h-4 w-4 text-sky-500" />
-            <span>Scenario Inputs</span>
+            <span>پارامترهای ورودی سناریو</span>
           </h3>
 
           <div className="space-y-3.5 text-xs">
             <div>
               <div className="flex justify-between font-medium text-slate-700 dark:text-slate-300 mb-1">
-                <span>Projection Horizon</span>
-                <span className="font-bold text-sky-500">{horizonMonths} Months ({Math.round(horizonMonths / 12)} Yrs)</span>
+                <span>افق زمانی شبیه‌سازی</span>
+                <span className="font-bold text-sky-500 font-mono">
+                  {horizonMonths} ماه ({Math.round(horizonMonths / 12)} سال)
+                </span>
               </div>
               <input
                 type="range"
@@ -110,33 +113,33 @@ export default function ScenariosPage() {
 
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Monthly Income Adjustment ($)
+                تغییر در درآمد ماهانه ($ پایه)
               </label>
               <input
                 type="number"
-                placeholder="+1500 (promotion) or -500"
+                placeholder="+1500 یا -500"
                 value={incomeDelta}
                 onChange={(e) => setIncomeDelta(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold font-mono"
               />
             </div>
 
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Monthly Expense Adjustment ($)
+                تغییر در هزینه ماهانه ($ پایه)
               </label>
               <input
                 type="number"
-                placeholder="-300 (budget cut) or +400"
+                placeholder="-300 یا +400"
                 value={expenseDelta}
                 onChange={(e) => setExpenseDelta(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold font-mono"
               />
             </div>
 
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Assumed Portfolio Annual Return (%)
+                بازدهی سالانه فرضی پورتفوی (%)
               </label>
               <input
                 type="number"
@@ -144,31 +147,31 @@ export default function ScenariosPage() {
                 placeholder="7.5"
                 value={growthRate}
                 onChange={(e) => setGrowthRate(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold font-mono"
               />
             </div>
 
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
               <span className="block font-semibold text-slate-800 dark:text-slate-200 mb-2">
-                Simulated New Debt / Loan
+                شبیه‌سازی وام و بدهی جدید
               </span>
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block font-medium text-slate-500 text-[11px] mb-1">
-                    Amount ($)
+                    اصل وام ($)
                   </label>
                   <input
                     type="number"
                     placeholder="0"
                     value={newLoanAmount}
                     onChange={(e) => setNewLoanAmount(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
                   />
                 </div>
                 <div>
                   <label className="block font-medium text-slate-500 text-[11px] mb-1">
-                    Rate (% APR)
+                    نرخ سود (%)
                   </label>
                   <input
                     type="number"
@@ -176,19 +179,19 @@ export default function ScenariosPage() {
                     placeholder="6.5"
                     value={newLoanRate}
                     onChange={(e) => setNewLoanRate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
                   />
                 </div>
                 <div>
                   <label className="block font-medium text-slate-500 text-[11px] mb-1">
-                    Term (Mos)
+                    مدت (ماه)
                   </label>
                   <input
                     type="number"
                     placeholder="60"
                     value={newLoanTerm}
                     onChange={(e) => setNewLoanTerm(parseInt(e.target.value) || 12)}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
                   />
                 </div>
               </div>
@@ -196,14 +199,14 @@ export default function ScenariosPage() {
 
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Immediate Windfall / Lump Sum ($)
+                دریافت وجه نقد غیرمنتظره / پاداش ($ یک‌باره)
               </label>
               <input
                 type="number"
-                placeholder="e.g. 15000 (bonus, inheritance)"
+                placeholder="مثلاً 15000"
                 value={windfall}
                 onChange={(e) => setWindfall(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
               />
             </div>
           </div>
@@ -214,39 +217,39 @@ export default function ScenariosPage() {
           {/* Key Simulation Deltas */}
           {result && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="fin-card p-4">
+              <div className="fin-card p-4 border-s-4 border-s-sky-500">
                 <span className="text-[11px] font-semibold text-slate-500 uppercase">
-                  Projected Net Worth
+                  پیش‌بینی ارزش خالص نهایی
                 </span>
-                <div className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                  {formatCurrency(result.final_projected_net_worth)}
+                <div className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1 font-mono">
+                  {formatMoney(result.final_projected_net_worth)}
                 </div>
-                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5">
-                  +{formatCurrency(result.net_worth_delta)} delta
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5 font-mono">
+                  +{formatMoney(result.net_worth_delta)} تغییر خالص
                 </span>
               </div>
 
-              <div className="fin-card p-4">
+              <div className="fin-card p-4 border-s-4 border-s-emerald-500">
                 <span className="text-[11px] font-semibold text-slate-500 uppercase">
-                  New Monthly Cash Flow
+                  جریان نقدینگی ماهانه جدید
                 </span>
-                <div className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                  {formatCurrency(result.new_monthly_cashflow)}
+                <div className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1 font-mono">
+                  {formatMoney(result.new_monthly_cashflow)}
                 </div>
-                <span className="text-[11px] text-slate-400 block mt-0.5">
-                  vs {formatCurrency(result.baseline_monthly_cashflow)} baseline
+                <span className="text-[11px] text-slate-400 block mt-0.5 font-mono">
+                  در برابر {formatMoney(result.baseline_monthly_cashflow)} پایه فعلی
                 </span>
               </div>
 
-              <div className="fin-card p-4">
+              <div className="fin-card p-4 border-s-4 border-s-rose-500">
                 <span className="text-[11px] font-semibold text-slate-500 uppercase">
-                  New Loan Payment
+                  قسط وام جدید ماهانه
                 </span>
-                <div className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">
-                  {formatCurrency(result.new_loan_monthly_payment)}
+                <div className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1 font-mono">
+                  {formatMoney(result.new_loan_monthly_payment)}
                 </div>
                 <span className="text-[11px] text-slate-400 block mt-0.5">
-                  monthly debt service addition
+                  تعهد بازپرداخت افزوده به اقساط
                 </span>
               </div>
             </div>
@@ -255,10 +258,10 @@ export default function ScenariosPage() {
           {/* Trajectory Area Chart */}
           <div className="fin-card p-5 h-[340px]">
             <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">
-              Projected Wealth Trajectory ({horizonMonths} Months)
+              مسیر رشد دارایی در افق {horizonMonths} ماهه
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              Deterministic compound calculation based on selected parameters
+              محاسبه قطعی بهره مرکب ریاضی بر مبنای پارامترهای انتخابی شما
             </p>
 
             <div className="h-[250px] w-full">
@@ -276,16 +279,16 @@ export default function ScenariosPage() {
                     fontSize={11}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
-                    formatter={(val: unknown) => [formatCurrency(Number(val)), "Projected Net Worth"]}
+                    formatter={(val: unknown) => [formatMoney(Number(val)), "ارزش خالص پیش‌بینی‌شده"]}
                     contentStyle={{
                       backgroundColor: "#0f172a",
                       borderColor: "#334155",
                       borderRadius: "0.75rem",
                       fontSize: "12px",
                       color: "#fff",
+                      direction: "rtl",
                     }}
                   />
                   <Area

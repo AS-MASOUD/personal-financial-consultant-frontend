@@ -8,10 +8,21 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
+
+const TYPE_LABELS: Record<string, string> = {
+  ALL: "همه تراکنش‌ها",
+  DEPOSIT: "واریز نقدی",
+  WITHDRAWAL: "برداشت نقدی",
+  BUY: "خرید دارایی",
+  SELL: "فروش دارایی",
+  DIVIDEND: "سود نقدی / توزیع سود",
+};
 
 export default function TransactionsPage() {
   const [filterType, setFilterType] = useState<string>("ALL");
+  const { formatMoney } = useCurrency();
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["transactions"],
@@ -31,10 +42,10 @@ export default function TransactionsPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            Transaction Activity Ledger
+            دفتر کل تراکنش‌های مالی
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Immutable audit record of all deposits, withdrawals, buys, and distributions
+            سوابق حسابداری کامل واریزها، برداشت‌ها، معاملات و دریافت سودهای نقدی
           </p>
         </div>
 
@@ -50,7 +61,7 @@ export default function TransactionsPage() {
                   : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
-              {t}
+              {TYPE_LABELS[t] || t}
             </button>
           ))}
         </div>
@@ -59,29 +70,29 @@ export default function TransactionsPage() {
       {/* Ledger Table */}
       <div className="fin-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-start text-xs">
             <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-6 font-semibold">Type</th>
-                <th className="py-3 px-4 font-semibold">Date</th>
-                <th className="py-3 px-4 font-semibold">Quantity / Units</th>
-                <th className="py-3 px-4 font-semibold text-right">Unit Price</th>
-                <th className="py-3 px-4 font-semibold text-right">Fee</th>
-                <th className="py-3 px-6 font-semibold text-right">Total Amount</th>
-                <th className="py-3 px-4 font-semibold text-center">Status</th>
+                <th className="py-3 px-6 font-semibold text-start">نوع عملیات</th>
+                <th className="py-3 px-4 font-semibold text-start">تاریخ</th>
+                <th className="py-3 px-4 font-semibold text-end">تعداد / حجم</th>
+                <th className="py-3 px-4 font-semibold text-end">نرخ واحد</th>
+                <th className="py-3 px-4 font-semibold text-end">کارمزد</th>
+                <th className="py-3 px-6 font-semibold text-end">مبلغ کل تراکنش</th>
+                <th className="py-3 px-4 font-semibold text-center">وضعیت</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {isLoading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
-                    Loading transaction ledger...
+                    در حال بارگذاری سوابق تراکنش‌ها...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
-                    No transactions found for the selected filter.
+                    هیچ تراکنشی مطابق با فیلتر انتخابی یافت نشد.
                   </td>
                 </tr>
               ) : (
@@ -113,7 +124,7 @@ export default function TransactionsPage() {
                           </div>
                           <div>
                             <span className="font-bold text-slate-900 dark:text-slate-100 block">
-                              {tx.transaction_type}
+                              {TYPE_LABELS[tx.transaction_type] || tx.transaction_type}
                             </span>
                             {tx.notes && (
                               <span className="text-[11px] text-slate-400 truncate max-w-xs block">
@@ -124,23 +135,23 @@ export default function TransactionsPage() {
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4 font-medium text-slate-600 dark:text-slate-300">
+                      <td className="py-3.5 px-4 font-medium text-slate-600 dark:text-slate-300 font-mono">
                         {formatDate(tx.transaction_date)}
                       </td>
 
-                      <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300">
-                        {tx.quantity ? parseFloat(tx.quantity).toLocaleString() : "—"}
+                      <td className="py-3.5 px-4 text-end text-slate-700 dark:text-slate-300 font-mono">
+                        {tx.quantity ? parseFloat(tx.quantity).toLocaleString("en-US") : "—"}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right text-slate-500">
-                        {tx.unit_price ? formatCurrency(tx.unit_price) : "—"}
+                      <td className="py-3.5 px-4 text-end text-slate-500 font-mono">
+                        {tx.unit_price ? formatMoney(tx.unit_price) : "—"}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right text-slate-400">
-                        {parseFloat(tx.fee) > 0 ? formatCurrency(tx.fee) : "—"}
+                      <td className="py-3.5 px-4 text-end text-slate-400 font-mono">
+                        {parseFloat(tx.fee) > 0 ? formatMoney(tx.fee) : "—"}
                       </td>
 
-                      <td className="py-3.5 px-6 text-right font-bold text-sm">
+                      <td className="py-3.5 px-6 text-end font-bold text-sm font-mono">
                         <span
                           className={
                             isPositiveFlow
@@ -149,14 +160,14 @@ export default function TransactionsPage() {
                           }
                         >
                           {isPositiveFlow ? "+" : "-"}
-                          {formatCurrency(tx.total_amount)}
+                          {formatMoney(tx.total_amount)}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
                           <CheckCircle2 className="h-3 w-3" />
-                          Settled
+                          تسویه شده
                         </span>
                       </td>
                     </tr>

@@ -35,10 +35,10 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-4xl">
       <div>
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-          Platform Settings & System Diagnostic
+          تنظیمات پلتفرم و وضعیت زیرساخت
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Environment configuration, system health, and manual snapshot triggers
+          پیکربندی محیط، بررسی سلامت دیتابیس محلی و ثبت دستی اسنپ‌شات‌های تاریخی
         </p>
       </div>
 
@@ -48,7 +48,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-2">
             <Server className="h-5 w-5 text-sky-500" />
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-              System Infrastructure Health
+              سلامت زیرساخت و ارتباطات سیستم
             </h3>
           </div>
           <span
@@ -58,28 +58,28 @@ export default function SettingsPage() {
                 : "bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400"
             }`}
           >
-            {health?.status === "ready" ? "Operational" : "Connecting"}
+            {health?.status === "ready" ? "فعال و عملیاتی" : "در حال اتصال..."}
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
             <span className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-              PostgreSQL Database
+              پایگاه داده PostgreSQL (محلی - PersonalFC_Db)
             </span>
             <div className="flex items-center gap-2 text-slate-500">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Status: {health?.components?.database || "Connected"}</span>
+              <span>وضعیت: {health?.components?.database === "connected" ? "متصل و آنلاین" : (health?.components?.database || "متصل")}</span>
             </div>
           </div>
 
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
             <span className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-              Redis In-Memory Cache
+              حافظه کش Redis (محلی)
             </span>
             <div className="flex items-center gap-2 text-slate-500">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Status: {health?.components?.redis || "Connected"}</span>
+              <span>وضعیت: {health?.components?.redis === "connected" ? "متصل و آنلاین" : (health?.components?.redis || "متصل")}</span>
             </div>
           </div>
         </div>
@@ -90,12 +90,12 @@ export default function SettingsPage() {
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
           <Camera className="h-5 w-5 text-indigo-500" />
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            Historical Financial Snapshot Engine
+            موتور ثبت اسنپ‌شات تاریخی دارایی‌ها
           </h3>
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          Snapshots freeze your current net worth, asset balances, and debt levels for chart historical tracking. Snapshots are recorded automatically by daily cron or can be triggered manually.
+          اسنپ‌شات‌ها وضعیت دقیق ارزش خالص، موجودی دارایی‌ها و تعهدات بدهی شما را در پایگاه داده ذخیره می‌کنند تا نمودارهای رشد تاریخی با دقت کامل ترسیم شوند.
         </p>
 
         <div className="flex items-center gap-3">
@@ -109,13 +109,13 @@ export default function SettingsPage() {
             ) : (
               <Camera className="h-3.5 w-3.5" />
             )}
-            <span>Capture Today&apos;s Snapshot</span>
+            <span>ثبت اسنپ‌شات وضعیت امروز</span>
           </button>
 
           {snapshotSuccess && (
             <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-4 w-4" />
-              <span>Snapshot recorded successfully!</span>
+              <span>اسنپ‌شات وضعیت مالی با موفقیت ثبت شد!</span>
             </span>
           )}
         </div>
@@ -126,28 +126,28 @@ export default function SettingsPage() {
         <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
           <Database className="h-5 w-5 text-emerald-500" />
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            Data Portability & Backup
+            پشتیبان‌گیری و جابه‌جایی اطلاعات
           </h3>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <button
-            onClick={() => alert("Database JSON export initiated.")}
+            onClick={() => alert("درخواست خروجی JSON از پایگاه داده ارسال شد.")}
             className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 flex items-center justify-between text-slate-700 dark:text-slate-300 font-medium"
           >
             <span className="flex items-center gap-2">
               <Download className="h-4 w-4 text-sky-500" />
-              <span>Export Full Portfolio JSON</span>
+              <span>تهیه خروجی کامل پورتفوی (JSON)</span>
             </span>
           </button>
 
           <button
-            onClick={() => alert("CSV import modal ready.")}
+            onClick={() => alert("فرم ورود دسته‌ای تراکنش‌ها فعال شد.")}
             className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 flex items-center justify-between text-slate-700 dark:text-slate-300 font-medium"
           >
             <span className="flex items-center gap-2">
               <Upload className="h-4 w-4 text-indigo-500" />
-              <span>Import Transactions (CSV)</span>
+              <span>بارگذاری و ورود تراکنش‌ها (CSV)</span>
             </span>
           </button>
         </div>

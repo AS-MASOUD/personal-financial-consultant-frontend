@@ -4,10 +4,21 @@ import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Clock, Check, X, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
+
+const CLASS_LABELS: Record<string, string> = {
+  equity: "سهام و ETF",
+  crypto: "ارز دیجیتال",
+  commodity: "طلا و کالاها",
+  fixed_income: "درآمد ثابت و اوراق",
+  real_estate: "املاک و مستغلات",
+};
 
 export default function AssetsPage() {
   const queryClient = useQueryClient();
+  const { formatMoney } = useCurrency();
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [symbol, setSymbol] = useState("");
   const [name, setName] = useState("");
@@ -44,10 +55,10 @@ export default function AssetsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            Tracked Assets & Instruments
+            فهرست و نرخ لحظه‌ای دارایی‌ها
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Equities, ETFs, commodities, bonds, and crypto tickers
+            سهام، صندوق‌های ETF، طلا و کالا، ارزهای دیجیتال و ابزارهای مالی تحت رصد
           </p>
         </div>
 
@@ -56,7 +67,7 @@ export default function AssetsPage() {
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
         >
           <Plus className="h-4 w-4" />
-          <span>Add Asset</span>
+          <span>افزودن دارایی جدید</span>
         </button>
       </div>
 
@@ -76,11 +87,11 @@ export default function AssetsPage() {
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
                     {asset.symbol}
                   </span>
                   <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">
-                    {asset.asset_class}
+                    {CLASS_LABELS[asset.asset_class.toLowerCase()] || asset.asset_class}
                   </span>
                 </div>
 
@@ -92,17 +103,17 @@ export default function AssetsPage() {
               <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-                    Current Quote
+                    نرخ لحظه‌ای بازار
                   </span>
-                  <span className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    {formatCurrency(asset.current_price)}
+                  <span className="text-base font-bold text-slate-900 dark:text-slate-100 font-mono">
+                    {formatMoney(asset.current_price)}
                   </span>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 flex items-center gap-1 justify-end">
+                <div className="text-start">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1 justify-end font-mono">
                     <Clock className="h-3 w-3" />
-                    {asset.price_updated_at ? formatDate(asset.price_updated_at) : "Active"}
+                    {asset.price_updated_at ? formatDate(asset.price_updated_at) : "فعال"}
                   </span>
                 </div>
               </div>
@@ -117,7 +128,7 @@ export default function AssetsPage() {
           <div className="fin-card w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl p-6 relative">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Register New Asset
+                ثبت دارایی جدید
               </h3>
               <button
                 onClick={() => setIsAddOpen(false)}
@@ -136,26 +147,26 @@ export default function AssetsPage() {
             >
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Ticker / Symbol (e.g. VTI, BTC)
+                  نماد / تیکر (مثلاً BTC, AAPL, طلا)
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. SPY"
+                  placeholder="مثلاً SPY یا BTC"
                   value={symbol}
                   onChange={(e) => setSymbol(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 uppercase focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 uppercase focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold font-mono"
                 />
               </div>
 
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Asset Full Name
+                  نام کامل دارایی
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. SPDR S&P 500 ETF Trust"
+                  placeholder="مثلاً صندوق شاخصی اس‌اند‌پی ۵۰۰ یا بیت‌کوین"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -165,23 +176,23 @@ export default function AssetsPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Asset Class
+                    دسته‌بندی دارایی
                   </label>
                   <select
                     value={assetClass}
                     onChange={(e) => setAssetClass(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
-                    <option value="equity">Equity / Stock</option>
-                    <option value="crypto">Cryptocurrency</option>
-                    <option value="commodity">Commodity</option>
-                    <option value="fixed_income">Bond / Fixed Income</option>
-                    <option value="real_estate">Real Estate</option>
+                    <option value="equity">سهام و صندوق ETF</option>
+                    <option value="crypto">ارز دیجیتال</option>
+                    <option value="commodity">طلا و کالاها</option>
+                    <option value="fixed_income">اوراق قرضه و درآمد ثابت</option>
+                    <option value="real_estate">املاک و مستغلات</option>
                   </select>
                 </div>
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Current Market Price ($)
+                    قیمت لحظه‌ای ($ دلار پایه)
                   </label>
                   <input
                     type="number"
@@ -190,18 +201,18 @@ export default function AssetsPage() {
                     placeholder="0.00"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Notes / Thesis (Optional)
+                  یادداشت و استراتژی سرمایه‌گذاری (اختیاری)
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Investment notes or strategy details"
+                  placeholder="توضیحات تحلیلی یا اهداف سرمایه‌گذاری"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -214,7 +225,7 @@ export default function AssetsPage() {
                   onClick={() => setIsAddOpen(false)}
                   className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
-                  Cancel
+                  انصراف
                 </button>
                 <button
                   type="submit"
@@ -226,7 +237,7 @@ export default function AssetsPage() {
                   ) : (
                     <Check className="h-4 w-4" />
                   )}
-                  <span>Save Asset</span>
+                  <span>ثبت دارایی</span>
                 </button>
               </div>
             </form>

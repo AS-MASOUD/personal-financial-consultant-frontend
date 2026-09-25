@@ -10,13 +10,25 @@ export function formatCurrency(
   currency = "USD",
   decimals = 2
 ): string {
-  if (amount === null || amount === undefined) return "$0.00";
+  if (amount === null || amount === undefined) {
+    return currency === "TOMAN" || currency === "IRT" ? "0 تومان" : "$0.00";
+  }
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
-  if (isNaN(num)) return "$0.00";
+  if (isNaN(num)) {
+    return currency === "TOMAN" || currency === "IRT" ? "0 تومان" : "$0.00";
+  }
+
+  if (currency === "TOMAN" || currency === "IRT") {
+    const formatted = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(num));
+    return `${formatted} تومان`;
+  }
 
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: currency,
+    currency: "USD",
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(num);

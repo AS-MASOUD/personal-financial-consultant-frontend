@@ -2,8 +2,9 @@
 
 import React from "react";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Plus, RefreshCw } from "lucide-react";
+import { Moon, Sun, Plus, RefreshCw, ArrowLeftRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCurrency } from "@/components/currency-provider";
 
 interface HeaderProps {
   title?: string;
@@ -13,8 +14,9 @@ interface HeaderProps {
 
 const emptySubscribe = () => () => {};
 
-export function Header({ title = "Overview", subtitle, onOpenQuickTx }: HeaderProps) {
+export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: HeaderProps) {
   const { theme, setTheme } = useTheme();
+  const { currency, toggleCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const mounted = React.useSyncExternalStore(
@@ -43,10 +45,20 @@ export function Header({ title = "Overview", subtitle, onOpenQuickTx }: HeaderPr
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Currency Switcher (Toman / Dollar) */}
+        <button
+          onClick={toggleCurrency}
+          title="تغییر واحد پول (تومان / دلار)"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors shadow-xs"
+        >
+          <ArrowLeftRight className="h-3 w-3 text-sky-500" />
+          <span>نمایش: {currency === "TOMAN" ? "تومان" : "دلار ($)"}</span>
+        </button>
+
         {/* Refresh Data */}
         <button
           onClick={handleRefresh}
-          title="Refresh Financial Data"
+          title="به‌روزرسانی داده‌های مالی"
           className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin text-sky-500" : ""}`} />
@@ -55,7 +67,7 @@ export function Header({ title = "Overview", subtitle, onOpenQuickTx }: HeaderPr
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          title="Toggle Theme"
+          title="تغییر حالت تیره / روشن"
           className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors w-8 h-8 flex items-center justify-center"
         >
           {mounted ? (
@@ -73,10 +85,10 @@ export function Header({ title = "Overview", subtitle, onOpenQuickTx }: HeaderPr
         {onOpenQuickTx && (
           <button
             onClick={onOpenQuickTx}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition-all shadow-sky-600/20 active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition-all shadow-sky-600/20 active:scale-95"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>Record Transaction</span>
+            <span>ثبت تراکنش</span>
           </button>
         )}
       </div>

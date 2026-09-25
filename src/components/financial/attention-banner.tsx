@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { AlertCircle, AlertTriangle, Info, ArrowRight } from "lucide-react";
+import { AlertCircle, AlertTriangle, Info, ArrowLeft } from "lucide-react";
 import { AttentionItem } from "@/types/financial";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ export function AttentionBanner({ items }: AttentionBannerProps) {
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
         <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-        <span>Financial Attention Radar</span>
+        <span>رادار هشدارهای مالی نیازمند توجه</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -57,8 +57,8 @@ export function AttentionBanner({ items }: AttentionBannerProps) {
                     href={item.action_link}
                     className="inline-flex items-center gap-1 font-semibold text-[11px] hover:underline"
                   >
-                    <span>View details</span>
-                    <ArrowRight className="h-3 w-3" />
+                    <span>مشاهده جزئیات</span>
+                    <ArrowLeft className="h-3 w-3" />
                   </Link>
                 </div>
               )}

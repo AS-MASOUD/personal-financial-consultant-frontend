@@ -4,10 +4,20 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency, formatPercent } from "@/lib/utils";
+import { formatPercent } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
+
+const CLASS_LABELS: Record<string, string> = {
+  ALL: "همه دارایی‌ها",
+  EQUITY: "سهام و ETF",
+  CRYPTO: "ارزهای دیجیتال",
+  COMMODITY: "طلا و کالاها",
+  FIXED_INCOME: "درآمد ثابت و اوراق",
+};
 
 export default function PortfolioPage() {
   const [selectedClass, setSelectedClass] = useState<string>("ALL");
+  const { formatMoney } = useCurrency();
 
   const { data: positions, isLoading } = useQuery({
     queryKey: ["asset-positions"],
@@ -51,50 +61,50 @@ export default function PortfolioPage() {
     <div className="space-y-6">
       {/* Portfolio Summary Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-sky-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Total Holdings Value
+            ارزش کل دارایی‌ها
           </span>
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
-            {formatCurrency(totalPortfolioValue)}
+          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2 font-mono">
+            {formatMoney(totalPortfolioValue)}
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Across {positions?.length || 0} active positions
+            در {positions?.length || 0} موقعیت فعال سرمایه‌گذاری
           </span>
         </div>
 
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-emerald-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Total Unrealized Return
+            کل سود / زیان تحقق‌نیافته
           </span>
           <div
-            className={`text-2xl font-bold mt-2 ${
+            className={`text-2xl font-bold mt-2 font-mono ${
               totalUnrealizedGain >= 0
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-rose-600 dark:text-rose-400"
             }`}
           >
-            {formatCurrency(totalUnrealizedGain)}
+            {formatMoney(totalUnrealizedGain)}
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Net capital gain/loss on invested cost
+            سود/زیان دفتری خالص نسبت به بهای تمام‌شده
           </span>
         </div>
 
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-indigo-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Top Concentration
+            بیشترین تمرکز دارایی
           </span>
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
-            {positions && positions[0] ? positions[0].asset_symbol : "None"}
+          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2 font-mono">
+            {positions && positions[0] ? positions[0].asset_symbol : "—"}
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
             {positions && positions[0]
               ? `${(
                   (parseFloat(positions[0].current_value) / (totalPortfolioValue || 1)) *
                   100
-                ).toFixed(1)}% of portfolio weight`
-              : "No positions"}
+                ).toFixed(1)}% از ارزش کل پورتفوی`
+              : "موقعیتی ثبت نشده است"}
           </span>
         </div>
       </div>
@@ -112,34 +122,34 @@ export default function PortfolioPage() {
                   : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
-              {cls === "ALL" ? "All Asset Classes" : cls.replace("_", " ")}
+              {CLASS_LABELS[cls] || cls}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Detailed Holdings Table / Cards */}
+      {/* Detailed Holdings Table */}
       <div className="fin-card overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            Current Holdings & Performance
+            ترکیب و عملکرد دارایی‌های پورتفوی
           </h3>
           <span className="text-xs text-slate-400">
-            Valued at real-time market prices
+            ارزش‌گذاری بر مبنای نرخ‌های لحظه‌ای بازار
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-start text-xs">
             <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-6 font-semibold">Asset</th>
-                <th className="py-3 px-4 font-semibold">Class</th>
-                <th className="py-3 px-4 font-semibold text-right">Holdings</th>
-                <th className="py-3 px-4 font-semibold text-right">Market Price</th>
-                <th className="py-3 px-4 font-semibold text-right">Avg Cost Basis</th>
-                <th className="py-3 px-4 font-semibold text-right">Total Value</th>
-                <th className="py-3 px-6 font-semibold text-right">Unrealized P&L</th>
+                <th className="py-3 px-6 font-semibold text-start">دارایی / نماد</th>
+                <th className="py-3 px-4 font-semibold text-start">دسته‌بندی</th>
+                <th className="py-3 px-4 font-semibold text-end">تعداد / موجودی</th>
+                <th className="py-3 px-4 font-semibold text-end">قیمت لحظه‌ای</th>
+                <th className="py-3 px-4 font-semibold text-end">میانگین بهای خرید</th>
+                <th className="py-3 px-4 font-semibold text-end">ارزش روز</th>
+                <th className="py-3 px-6 font-semibold text-end">سود / زیان دفتری</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -155,11 +165,11 @@ export default function PortfolioPage() {
                   >
                     <td className="py-3.5 px-6">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center text-xs shrink-0">
+                        <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center text-xs shrink-0 font-mono">
                           {pos.asset_symbol.slice(0, 3)}
                         </div>
                         <div>
-                          <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                          <span className="font-bold text-slate-900 dark:text-slate-100 block font-mono">
                             {pos.asset_symbol}
                           </span>
                           <span className="text-[11px] text-slate-400">
@@ -169,33 +179,33 @@ export default function PortfolioPage() {
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase">
-                        {pos.asset_class}
+                    <td className="py-3.5 px-4 text-start">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        {CLASS_LABELS[pos.asset_class.toUpperCase()] || pos.asset_class}
                       </span>
                     </td>
 
-                    <td className="py-3.5 px-4 text-right font-medium text-slate-800 dark:text-slate-200">
-                      {parseFloat(pos.quantity).toLocaleString(undefined, {
+                    <td className="py-3.5 px-4 text-end font-medium text-slate-800 dark:text-slate-200 font-mono">
+                      {parseFloat(pos.quantity).toLocaleString("en-US", {
                         maximumFractionDigits: 6,
                       })}
                     </td>
 
-                    <td className="py-3.5 px-4 text-right font-medium text-slate-800 dark:text-slate-200">
-                      {formatCurrency(pos.current_price)}
+                    <td className="py-3.5 px-4 text-end font-medium text-slate-800 dark:text-slate-200 font-mono">
+                      {formatMoney(pos.current_price)}
                     </td>
 
-                    <td className="py-3.5 px-4 text-right text-slate-500">
-                      {formatCurrency(pos.average_cost_basis)}
+                    <td className="py-3.5 px-4 text-end text-slate-500 font-mono">
+                      {formatMoney(pos.average_cost_basis)}
                     </td>
 
-                    <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-slate-100">
-                      {formatCurrency(pos.current_value)}
+                    <td className="py-3.5 px-4 text-end font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {formatMoney(pos.current_value)}
                     </td>
 
-                    <td className="py-3.5 px-6 text-right">
+                    <td className="py-3.5 px-6 text-end">
                       <div
-                        className={`inline-flex items-center gap-1 font-semibold ${
+                        className={`inline-flex items-center gap-1 font-semibold font-mono ${
                           isPositive
                             ? "text-emerald-600 dark:text-emerald-400"
                             : "text-rose-600 dark:text-rose-400"
@@ -206,7 +216,7 @@ export default function PortfolioPage() {
                         ) : (
                           <TrendingDown className="h-3 w-3" />
                         )}
-                        <span>{formatCurrency(pnl)}</span>
+                        <span>{formatMoney(pnl)}</span>
                         <span className="text-[11px]">({formatPercent(pnlPct)})</span>
                       </div>
                     </td>

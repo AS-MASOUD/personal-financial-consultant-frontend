@@ -12,9 +12,12 @@ import {
   Cell,
 } from "recharts";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { useCurrency } from "@/components/currency-provider";
 
 export default function CashFlowPage() {
+  const { formatMoney } = useCurrency();
+
   const { data: summary } = useQuery({
     queryKey: ["cashflow-summary"],
     queryFn: () => api.getCashflowSummary(),
@@ -39,66 +42,66 @@ export default function CashFlowPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-          Cash Flow Waterfall & Budget Categories
+          جریان نقدینگی و بودجه‌بندی هزینه‌ها
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Income inflows, living expenses, and net surplus retention
+          ورودی درآمدها، مصارف معیشتی و مازاد خالص قابل پس‌انداز یا سرمایه‌گذاری
         </p>
       </div>
 
       {/* Cash Flow Top Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-emerald-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Total Monthly Inflows
+            کل ورودی‌های ماهانه
           </span>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
-            {formatCurrency(totalIncome)}
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
+            {formatMoney(totalIncome)}
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Salary, dividends & capital returns
+            حقوق، سود نقدی و عایدات سرمایه
           </span>
         </div>
 
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-rose-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Total Monthly Outflows
+            کل مخارج و مصارف ماهانه
           </span>
-          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-2">
-            {formatCurrency(totalExpenses)}
+          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-2 font-mono">
+            {formatMoney(totalExpenses)}
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Living expenses & operational costs
+            هزینه‌های معیشتی و تعهدات دوره‌ای
           </span>
         </div>
 
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-sky-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Net Surplus (Savings)
+            مازاد خالص پس‌انداز
           </span>
           <div
-            className={`text-2xl font-bold mt-2 ${
+            className={`text-2xl font-bold mt-2 font-mono ${
               netSavings >= 0
                 ? "text-sky-600 dark:text-sky-400"
                 : "text-rose-600 dark:text-rose-400"
             }`}
           >
-            {formatCurrency(netSavings)}
+            {formatMoney(netSavings)}
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Available for investment & debt payoff
+            نقدینگی در دسترس برای سرمایه‌گذاری
           </span>
         </div>
 
-        <div className="fin-card p-5">
+        <div className="fin-card p-5 border-s-4 border-s-indigo-500">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Savings Rate
+            نرخ پس‌انداز ماهانه
           </span>
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
+          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2 font-mono">
             {savingsRate.toFixed(1)}%
           </div>
           <span className="text-xs text-slate-400 mt-1 block">
-            Percentage of income retained
+            درصد نگهداری‌شده از کل درآمد
           </span>
         </div>
       </div>
@@ -106,11 +109,11 @@ export default function CashFlowPage() {
       {/* Category Breakdown Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 fin-card p-5">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2">
-            Category Expense Distribution
+          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">
+            توزیع مخارج بر حسب سرفصل هزینه‌کرد
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Spending by functional category
+            تحلیل مصارف جاری در دسته‌بندی‌های مختلف
           </p>
 
           <div className="h-[280px] w-full">
@@ -134,16 +137,16 @@ export default function CashFlowPage() {
                     fontSize={11}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(val) => `$${val}`}
                   />
                   <Tooltip
-                    formatter={(val: unknown) => [formatCurrency(Number(val)), "Spent"]}
+                    formatter={(val: unknown) => [formatMoney(Number(val)), "هزینه‌شده"]}
                     contentStyle={{
                       backgroundColor: "#0f172a",
                       borderColor: "#334155",
                       borderRadius: "0.75rem",
                       fontSize: "12px",
                       color: "#fff",
+                      direction: "rtl",
                     }}
                   />
                   <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
@@ -157,7 +160,7 @@ export default function CashFlowPage() {
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                No expense entries found for the period.
+                هیچ ورودی هزینه‌ای در این بازه زمانی ثبت نشده است.
               </div>
             )}
           </div>
@@ -167,13 +170,13 @@ export default function CashFlowPage() {
         <div className="fin-card p-5 flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-              Budget Categories
+              سرفصل‌های بودجه‌بندی
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-              Configured spending categories
+              دسته‌بندی‌های فعال مدیریت مصارف
             </p>
 
-            <div className="space-y-2.5 overflow-y-auto max-h-[250px] pr-1">
+            <div className="space-y-2.5 overflow-y-auto max-h-[250px] pe-1">
               {categories?.map((cat) => (
                 <div
                   key={cat.id}
@@ -181,15 +184,15 @@ export default function CashFlowPage() {
                 >
                   <div className="flex items-center gap-2.5">
                     <span
-                      className="h-3 w-3 rounded-full"
+                      className="h-3 w-3 rounded-full shrink-0"
                       style={{ backgroundColor: cat.color_hex }}
                     />
                     <span className="font-semibold text-slate-800 dark:text-slate-200">
                       {cat.name}
                     </span>
                   </div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">
-                    {cat.flow_type}
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {cat.flow_type === "income" ? "درآمد" : "هزینه"}
                   </span>
                 </div>
               ))}
@@ -202,19 +205,19 @@ export default function CashFlowPage() {
       <div className="fin-card overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            Recent Cashflow Line Items
+            ریز اقلام اخیر جریان نقدینگی
           </h3>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-start text-xs">
             <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-6 font-semibold">Description</th>
-                <th className="py-3 px-4 font-semibold">Category</th>
-                <th className="py-3 px-4 font-semibold">Date</th>
-                <th className="py-3 px-4 font-semibold text-center">Recurring</th>
-                <th className="py-3 px-6 font-semibold text-right">Amount</th>
+                <th className="py-3 px-6 font-semibold text-start">شرح تراکنش</th>
+                <th className="py-3 px-4 font-semibold text-start">دسته‌بندی</th>
+                <th className="py-3 px-4 font-semibold text-start">تاریخ</th>
+                <th className="py-3 px-4 font-semibold text-center">ماهیت</th>
+                <th className="py-3 px-6 font-semibold text-end">مبلغ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -234,15 +237,15 @@ export default function CashFlowPage() {
                       <span className="inline-flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
                         {entry.category_color && (
                           <span
-                            className="h-2 w-2 rounded-full"
+                            className="h-2 w-2 rounded-full shrink-0"
                             style={{ backgroundColor: entry.category_color }}
                           />
                         )}
-                        {entry.category_name || "Uncategorized"}
+                        {entry.category_name || "دسته‌بندی‌نشده"}
                       </span>
                     </td>
 
-                    <td className="py-3 px-4 text-slate-500">
+                    <td className="py-3 px-4 text-slate-500 font-mono">
                       {formatDate(entry.entry_date)}
                     </td>
 
@@ -254,11 +257,11 @@ export default function CashFlowPage() {
                             : "bg-slate-100 dark:bg-slate-800 text-slate-500"
                         }`}
                       >
-                        {entry.is_recurring ? "Recurring" : "One-off"}
+                        {entry.is_recurring ? "تکرارشونده" : "یک‌باره"}
                       </span>
                     </td>
 
-                    <td className="py-3 px-6 text-right font-bold text-sm">
+                    <td className="py-3 px-6 text-end font-bold text-sm font-mono">
                       <span
                         className={
                           isIncome
@@ -267,7 +270,7 @@ export default function CashFlowPage() {
                         }
                       >
                         {isIncome ? "+" : "-"}
-                        {formatCurrency(entry.amount)}
+                        {formatMoney(entry.amount)}
                       </span>
                     </td>
                   </tr>

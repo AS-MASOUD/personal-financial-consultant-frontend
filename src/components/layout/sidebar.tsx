@@ -21,35 +21,35 @@ import {
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
-  { name: "Overview", href: "/", icon: LayoutDashboard },
-  { name: "Portfolio", href: "/portfolio", icon: PieChart },
-  { name: "Assets", href: "/assets", icon: Coins },
-  { name: "Transactions", href: "/transactions", icon: ArrowLeftRight },
-  { name: "Liabilities", href: "/liabilities", icon: ShieldAlert },
-  { name: "Cash Flow", href: "/cashflow", icon: ArrowDownUp },
-  { name: "Goals", href: "/goals", icon: Target },
-  { name: "Analytics", href: "/analytics", icon: LineChart },
-  { name: "Scenarios", href: "/scenarios", icon: SlidersHorizontal },
-  { name: "AI Assistant", href: "/ai", icon: Bot, highlight: true },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "نمای کلی", href: "/", icon: LayoutDashboard },
+  { name: "سبد دارایی (پورتفولیو)", href: "/portfolio", icon: PieChart },
+  { name: "فهرست دارایی‌ها", href: "/assets", icon: Coins },
+  { name: "دفتر کل تراکنش‌ها", href: "/transactions", icon: ArrowLeftRight },
+  { name: "بدهی‌ها و تسهیلات", href: "/liabilities", icon: ShieldAlert },
+  { name: "جریان نقدینگی و بودجه", href: "/cashflow", icon: ArrowDownUp },
+  { name: "اهداف مالی", href: "/goals", icon: Target },
+  { name: "تحلیل و نسبت‌های مالی", href: "/analytics", icon: LineChart },
+  { name: "شبیه‌ساز سناریوها", href: "/scenarios", icon: SlidersHorizontal },
+  { name: "دستیار هوشمند مالی", href: "/ai", icon: Bot, highlight: true },
+  { name: "تنظیمات سیستم", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md flex flex-col shrink-0 min-h-screen">
+    <aside className="w-64 border-l border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md flex flex-col shrink-0 min-h-screen">
       {/* Brand Header */}
       <div className="h-16 flex items-center px-6 gap-3 border-b border-slate-200 dark:border-slate-800">
         <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center shadow-md shadow-indigo-500/20 text-white">
           <Wallet className="h-5 w-5" />
         </div>
         <div className="flex flex-col">
-          <span className="font-semibold tracking-tight text-sm text-slate-900 dark:text-slate-100">
+          <span className="font-bold tracking-tight text-sm text-slate-900 dark:text-slate-100">
             Personal FC
           </span>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            Command Center
+            فرماندهی مالی شخصی
           </span>
         </div>
       </div>
@@ -96,7 +96,7 @@ export function Sidebar() {
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Database Online</span>
+            <span>پایگاه‌داده متصل است</span>
           </div>
           <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">v0.1.0</span>
         </div>
