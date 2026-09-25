@@ -11,10 +11,17 @@ interface HeaderProps {
   onOpenQuickTx?: () => void;
 }
 
+const emptySubscribe = () => () => {};
+
 export function Header({ title = "Overview", subtitle, onOpenQuickTx }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const mounted = React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -49,9 +56,17 @@ export function Header({ title = "Overview", subtitle, onOpenQuickTx }: HeaderPr
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           title="Toggle Theme"
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+          className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors w-8 h-8 flex items-center justify-center"
         >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {mounted ? (
+            theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )
+          ) : (
+            <span className="h-4 w-4 block" />
+          )}
         </button>
 
         {/* New Transaction Button */}
