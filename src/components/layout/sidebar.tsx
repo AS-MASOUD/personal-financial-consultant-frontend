@@ -17,11 +17,15 @@ import {
   Settings,
   Sparkles,
   Wallet,
+  ShieldCheck,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth-provider";
 
 const navigationItems = [
   { name: "نمای کلی", href: "/", icon: LayoutDashboard },
+  { name: "پروفایل کاربری", href: "/profile", icon: UserCircle },
   { name: "سبد دارایی (پورتفولیو)", href: "/portfolio", icon: PieChart },
   { name: "فهرست دارایی‌ها", href: "/assets", icon: Coins },
   { name: "دفتر کل تراکنش‌ها", href: "/transactions", icon: ArrowLeftRight },
@@ -31,11 +35,13 @@ const navigationItems = [
   { name: "تحلیل و نسبت‌های مالی", href: "/analytics", icon: LineChart },
   { name: "شبیه‌ساز سناریوها", href: "/scenarios", icon: SlidersHorizontal },
   { name: "دستیار هوشمند مالی", href: "/ai", icon: Bot, highlight: true },
+  { name: "مدیریت کاربران و نقش‌ها", href: "/users", icon: ShieldCheck, sysManagerOnly: true },
   { name: "تنظیمات سیستم", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { isSysManager } = useAuth();
 
   return (
     <aside className="w-64 border-l border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md flex flex-col shrink-0 min-h-screen">
@@ -45,11 +51,14 @@ export function Sidebar() {
           <Wallet className="h-5 w-5" />
         </div>
         <div className="flex flex-col">
-          <span className="font-bold tracking-tight text-sm text-slate-900 dark:text-slate-100">
-            Personal FC
+          <span className="font-bold text-[15px] tracking-tight text-sm text-slate-900 dark:text-slate-100">
+            مدیریت مالی تئا
           </span>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            فرماندهی مالی شخصی
+            Theia Personal
+          </span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            Financial Consultant
           </span>
         </div>
       </div>
@@ -57,6 +66,11 @@ export function Sidebar() {
       {/* Nav links */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navigationItems.map((item) => {
+          // Gate sysManager-only items strictly to sysmanager
+          if (item.sysManagerOnly && !isSysManager) {
+            return null;
+          }
+
           const isActive = pathname === item.href;
           const Icon = item.icon;
 
@@ -76,6 +90,8 @@ export function Sidebar() {
                   "h-4 w-4 shrink-0 transition-colors",
                   isActive
                     ? "text-sky-400"
+                    : item.sysManagerOnly
+                    ? "text-purple-400 group-hover:text-purple-500"
                     : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200"
                 )}
               />
@@ -84,6 +100,11 @@ export function Sidebar() {
                 <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
                   <Sparkles className="h-2.5 w-2.5" />
                   AI
+                </span>
+              )}
+              {item.sysManagerOnly && isSysManager && (
+                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                  مدیر ارشد
                 </span>
               )}
             </Link>

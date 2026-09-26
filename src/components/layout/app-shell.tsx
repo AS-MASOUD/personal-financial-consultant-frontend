@@ -16,8 +16,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header
-          title="Command Center"
-          subtitle="Real-time financial positions, performance & attention indicators"
+          title="مشاور مدیریت مالی تئا"
+          subtitle="بررسی وضعیت مالی، عملکرد مدیریت و شاخص پیشرفت"
           onOpenQuickTx={() => setIsQuickTxOpen(true)}
         />
 

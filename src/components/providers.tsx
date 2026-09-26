@@ -5,6 +5,8 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import React, { useState } from "react";
 
 import { CurrencyProvider } from "@/components/currency-provider";
+import { AuthProvider } from "@/components/auth-provider";
+import { ToastProvider } from "@/components/toast-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -23,7 +25,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
-        <CurrencyProvider>{children}</CurrencyProvider>
+        <AuthProvider>
+          <CurrencyProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </CurrencyProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </NextThemesProvider>
   );
