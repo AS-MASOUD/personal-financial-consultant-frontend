@@ -81,7 +81,7 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
         transaction_date: new Date().toISOString(),
         total_amount: amount,
         fee: fee || "0",
-        currency: "USD",
+        currency: "TOMAN",
         notes: notes || undefined,
       };
 
@@ -217,15 +217,15 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
                 </div>
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    قیمت واحد ($)
+                    قیمت واحد (تومان)
                   </label>
                   <input
                     type="number"
                     step="any"
-                    placeholder="مثلاً 210.50"
+                    placeholder="مثلاً 50,000,000"
                     value={unitPrice}
                     onChange={(e) => handleUnitPriceChange(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
                   />
                 </div>
               </div>
@@ -236,28 +236,28 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                مبلغ کل ($)
+                مبلغ کل (تومان)
               </label>
               <input
                 type="number"
                 step="any"
-                placeholder="0.00"
+                placeholder="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-semibold"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-semibold font-mono"
               />
             </div>
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                کارمزد معامله ($)
+                کارمزد معامله (تومان)
               </label>
               <input
                 type="number"
                 step="any"
-                placeholder="0.00"
+                placeholder="0"
                 value={fee}
                 onChange={(e) => setFee(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
               />
             </div>
           </div>

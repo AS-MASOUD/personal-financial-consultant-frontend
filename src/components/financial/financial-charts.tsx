@@ -26,7 +26,7 @@ interface NetWorthChartProps {
 
 export function NetWorthChart({ data }: NetWorthChartProps) {
   const [range, setRange] = useState<"30D" | "90D" | "ALL">("90D");
-  const { formatMoney } = useCurrency();
+  const { currency, exchangeRate, formatMoney } = useCurrency();
 
   const formattedData = React.useMemo(() => {
     if (!data) return [];
@@ -34,16 +34,24 @@ export function NetWorthChart({ data }: NetWorthChartProps) {
     if (range === "30D") slice = slice.slice(-10);
     else if (range === "90D") slice = slice.slice(-30);
 
-    return slice.map((item) => ({
-      date: item.snapshot_date ? item.snapshot_date.slice(5) : "",
-      netWorth: typeof item.net_worth === "string" ? parseFloat(item.net_worth) : item.net_worth,
-      assets: typeof item.total_assets === "string" ? parseFloat(item.total_assets) : item.total_assets,
-      liabilities:
-        typeof item.total_liabilities === "string"
-          ? parseFloat(item.total_liabilities)
-          : item.total_liabilities,
-    }));
-  }, [data, range]);
+    const factor = currency === "USD" ? 1 / exchangeRate : 1;
+
+    return slice.map((item) => {
+      const rawNw = typeof item.net_worth === "string" ? parseFloat(item.net_worth) : item.net_worth || 0;
+      const rawAssets = typeof item.total_assets === "string" ? parseFloat(item.total_assets) : item.total_assets || 0;
+      const rawLiab = typeof item.total_liabilities === "string" ? parseFloat(item.total_liabilities) : item.total_liabilities || 0;
+
+      return {
+        date: item.snapshot_date ? item.snapshot_date.slice(5) : "",
+        netWorth: rawNw * factor,
+        assets: rawAssets * factor,
+        liabilities: rawLiab * factor,
+        rawNetWorth: rawNw,
+        rawAssets: rawAssets,
+        rawLiabilities: rawLiab,
+      };
+    });
+  }, [data, range, currency, exchangeRate]);
 
   return (
     <div className="fin-card p-5 flex flex-col justify-between h-[360px]">
@@ -105,25 +113,30 @@ export function NetWorthChart({ data }: NetWorthChartProps) {
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`}
+                tickFormatter={(val) =>
+                  currency === "USD"
+                    ? `$${val >= 1000 ? (val / 1000).toFixed(0) + "k" : val.toFixed(0)}`
+                    : `${val >= 1000000 ? (val / 1000000).toFixed(0) + " م.ت" : val >= 1000 ? (val / 1000).toFixed(0) + " ه.ت" : val.toFixed(0)}`
+                }
               />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
+                    const row = payload[0]?.payload;
                     return (
                       <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl text-xs space-y-1.5 border border-slate-700 text-right" dir="rtl">
                         <div className="font-semibold text-slate-300">{label}</div>
                         <div className="text-sky-400 font-bold">
-                          ارزش خالص: {formatMoney(payload[0]?.value as number)}
+                          ارزش خالص: {formatMoney(row?.rawNetWorth)}
                         </div>
-                        {payload[1] && (
+                        {row?.rawAssets !== undefined && (
                           <div className="text-emerald-400">
-                            کل دارایی‌ها: {formatMoney(payload[1]?.value as number)}
+                            کل دارایی‌ها: {formatMoney(row?.rawAssets)}
                           </div>
                         )}
-                        {payload[2] && (
+                        {row?.rawLiabilities !== undefined && (
                           <div className="text-rose-400">
-                            کل بدهی‌ها: {formatMoney(payload[2]?.value as number)}
+                            کل بدهی‌ها: {formatMoney(row?.rawLiabilities)}
                           </div>
                         )}
                       </div>
@@ -159,7 +172,7 @@ const ALLOCATION_COLORS = [
 ];
 
 const CATEGORY_FA: Record<string, string> = {
-  Cash: "نقدینگی و سپرده",
+  Cash: "نقدینگی و پس‌انداز",
   Equity: "سهام و صندوق‌ها",
   Crypto: "ارزهای دیجیتال",
   Commodity: "کالا و طلا",
@@ -168,7 +181,7 @@ const CATEGORY_FA: Record<string, string> = {
   Other: "سایر دارایی‌ها",
   equity: "سهام و صندوق‌ها",
   crypto: "ارزهای دیجیتال",
-  cash: "نقدینگی و سپرده",
+  cash: "نقدینگی و پس‌انداز",
   commodity: "کالا و طلا",
   fixed_income: "اوراق درآمد ثابت",
   real_estate: "املاک و مستغلات",
@@ -193,63 +206,69 @@ export function AllocationDonut({ data }: AllocationDonutProps) {
         </p>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-4 mt-2">
-        <div className="h-[180px] w-[180px] shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={3}
-                dataKey="amount"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value: unknown) => [formatMoney(Number(value)), "ارزش روز"]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+      {chartData.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-xs text-slate-400">
+          دارایی یا پوزیشنی جهت نمایش ثبت نشده است.
         </div>
-
-        {/* Clean Categorical Legend */}
-        <div className="flex-1 w-full space-y-1.5 overflow-y-auto max-h-[190px] ps-1">
-          {chartData.map((item, idx) => (
-            <div
-              key={item.category}
-              className="flex items-center justify-between text-xs py-1 border-b border-slate-100 dark:border-slate-800/60"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{
-                    backgroundColor: ALLOCATION_COLORS[idx % ALLOCATION_COLORS.length],
-                  }}
+      ) : (
+        <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-4 mt-2">
+          <div className="h-[180px] w-[180px] shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={3}
+                  dataKey="amount"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: unknown) => [formatMoney(Number(value)), "ارزش روز"]}
                 />
-                <span className="font-medium text-slate-700 dark:text-slate-300">
-                  {CATEGORY_FA[item.category] || item.category}
-                </span>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Clean Categorical Legend */}
+          <div className="flex-1 w-full space-y-1.5 overflow-y-auto max-h-[190px] ps-1">
+            {chartData.map((item, idx) => (
+              <div
+                key={item.category}
+                className="flex items-center justify-between text-xs py-1 border-b border-slate-100 dark:border-slate-800/60"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{
+                      backgroundColor: ALLOCATION_COLORS[idx % ALLOCATION_COLORS.length],
+                    }}
+                  />
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    {CATEGORY_FA[item.category] || item.category}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    %{item.percentage.toFixed(1)}
+                  </span>
+                  <span className="text-slate-400 text-[11px]">
+                    {formatMoney(item.amount)}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  %{item.percentage.toFixed(1)}
-                </span>
-                <span className="text-slate-400 text-[11px]">
-                  {formatMoney(item.amount)}
-                </span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

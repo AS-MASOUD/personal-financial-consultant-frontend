@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/components/auth-provider";
@@ -22,8 +22,13 @@ import {
 } from "lucide-react";
 
 export default function UsersPage() {
-  const { user: currentUser, isSysManager, isAdmin } = useAuth();
+  const { user: currentUser, isSysManager, isAdmin, isLoading: authLoading } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
@@ -132,9 +137,18 @@ export default function UsersPage() {
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setActionError(null);
+    const cleanName = newName.trim();
+    if (!cleanName) {
+      setActionError("نام و نام خانوادگی نمی‌تواند خالی باشد.");
+      return;
+    }
+    if (cleanName.length < 2 || cleanName.length > 50) {
+      setActionError("نام و نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر باشد.");
+      return;
+    }
     createMutation.mutate({
-      email: newEmail,
-      full_name: newName,
+      email: newEmail.trim(),
+      full_name: cleanName,
       password: newPassword,
       role: newRole,
       is_active: true,
@@ -224,6 +238,17 @@ export default function UsersPage() {
         );
     }
   };
+
+  if (!mounted || authLoading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+          <span>در حال اعتبارسنجی دسترسی مدیر ارشد...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!isSysManager) {
     return (
@@ -601,6 +626,7 @@ export default function UsersPage() {
                 <input
                   type="text"
                   required
+                  maxLength={50}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="محمد حسینی"

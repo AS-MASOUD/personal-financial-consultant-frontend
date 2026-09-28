@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
@@ -12,77 +12,187 @@ import {
   ArrowRight,
   AlertCircle,
   Smartphone,
+  RotateCcw,
+  CheckCircle2,
+  KeyRound,
+  ArrowLeft,
 } from "lucide-react";
+import { normalizeDigitsToEnglish, isValidIranPhone } from "@/lib/utils";
 
 function RegisterContent() {
-  const { register } = useAuth();
+  const { requestRegisterOTP, registerWithOTP } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const initialIdentifier = searchParams.get("phone") || searchParams.get("identifier") || "";
 
+  // Step state: "details" -> "otp"
+  const [step, setStep] = useState<"details" | "otp">("details");
+
+  // Form details
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState(initialIdentifier);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // OTP details
+  const [otpCode, setOtpCode] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [debugCode, setDebugCode] = useState<string | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  // Timer countdown
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
 
+  const validateDetails = (): { cleanName: string; cleanPhone: string } | null => {
     const cleanName = fullName.trim();
-    const cleanPhone = phoneNumber.trim();
+    const cleanPhone = normalizeDigitsToEnglish(phoneNumber).replace(/\D/g, "");
 
     if (!cleanName) {
       const msg = "لطفاً نام و نام خانوادگی را وارد فرمایید.";
       setError(msg);
       toast.error(msg, "فیلد الزامی");
-      return;
+      return null;
+    }
+
+    if (cleanName.length < 2 || cleanName.length > 50) {
+      const msg = "نام و نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر باشد.";
+      setError(msg);
+      toast.error(msg, "خطای اعتبارسنجی");
+      return null;
     }
 
     if (!cleanPhone) {
       const msg = "لطفاً شماره موبایل خود را وارد فرمایید.";
       setError(msg);
       toast.error(msg, "فیلد الزامی");
-      return;
+      return null;
     }
 
-    if (password !== confirmPassword) {
-      const msg = "تکرار رمز عبور با رمز عبور اصلی مطابقت ندارد.";
+    if (!isValidIranPhone(cleanPhone)) {
+      const msg = "شماره موبایل نامعتبر است. شماره باید با 09 شروع شده و دقیقاً ۱۱ رقم باشد (مثال: 09123456789).";
       setError(msg);
-      toast.error(msg, "خطای رمز عبور");
-      return;
+      toast.error(msg, "شماره موبایل نامعتبر");
+      return null;
+    }
+
+    if (!password) {
+      const msg = "لطفاً یک رمز عبور تعیین فرمایید.";
+      setError(msg);
+      toast.error(msg, "فیلد الزامی");
+      return null;
     }
 
     if (password.length < 6) {
       const msg = "طول رمز عبور باید حداقل ۶ کاراکتر باشد.";
       setError(msg);
       toast.error(msg, "رمز عبور کوتاه");
+      return null;
+    }
+
+    if (password !== confirmPassword) {
+      const msg = "تکرار رمز عبور با رمز عبور اصلی مطابقت ندارد.";
+      setError(msg);
+      toast.error(msg, "خطای رمز عبور");
+      return null;
+    }
+
+    return { cleanName, cleanPhone };
+  };
+
+  // Step 1: Request OTP
+  const handleRequestOTP = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError(null);
+
+    const valid = validateDetails();
+    if (!valid) return;
+
+    setIsLoading(true);
+
+    try {
+      const res = await requestRegisterOTP({
+        full_name: valid.cleanName,
+        phone_number: valid.cleanPhone,
+        password: password,
+      });
+
+      setCountdown(res.cooldown_seconds || 60);
+      if (res.debug_code) {
+        setDebugCode(res.debug_code);
+      }
+      setStep("otp");
+      toast.success(
+        `کد تایید یکبار مصرف به شماره ${valid.cleanPhone} پیامک شد.`,
+        "کد تایید ارسال شد"
+      );
+    } catch (err: unknown) {
+      const errorObj = err as Error & { code?: string; status?: number };
+      const isConflict =
+        errorObj.status === 409 ||
+        errorObj.code === "CONFLICT" ||
+        errorObj.message?.includes("ثبت‌نام کرده است") ||
+        errorObj.message?.includes("ثبت شده است");
+
+      if (isConflict) {
+        const conflictMsg = "کاربری با این شماره موبایل قبلاً در سامانه ثبت‌نام کرده است. لطفاً وارد شوید.";
+        setError(conflictMsg);
+        toast.error(conflictMsg, "حساب قبلاً وجود دارد");
+      } else {
+        const msg = errorObj.message || "خطا در ارسال کد تایید یکبار مصرف.";
+        setError(msg);
+        toast.error(msg, "خطا در ارسال کد");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP & Complete Registration
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const valid = validateDetails();
+    if (!valid) {
+      setStep("details");
+      return;
+    }
+
+    const cleanCode = normalizeDigitsToEnglish(otpCode).replace(/\D/g, "");
+    if (!cleanCode || cleanCode.length < 4) {
+      const msg = "لطفاً کد تایید دریافت شده را به درستی وارد فرمایید.";
+      setError(msg);
+      toast.error(msg, "کد تایید ناقص");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      await register({
-        full_name: cleanName,
-        phone_number: cleanPhone,
+      await registerWithOTP({
+        full_name: valid.cleanName,
+        phone_number: valid.cleanPhone,
         password: password,
+        code: cleanCode,
       });
+
       toast.success("ثبت‌نام شما با موفقیت انجام شد. خوش آمدید!", "ثبت‌نام موفق");
-      router.push("/");
+      router.push("/?onboarding=1");
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message || "خطا در ثبت‌نام کاربر.");
-        toast.error(err.message || "خطا در ثبت‌نام کاربر.", "خطای ثبت‌نام");
-      } else {
-        const fallbackMsg = "خطا در برقراری ارتباط با سرور.";
-        setError(fallbackMsg);
-        toast.error(fallbackMsg, "خطای ارتباط");
-      }
+      const errorObj = err as Error & { code?: string; status?: number };
+      const msg = errorObj.message || "کد تایید وارد شده نامعتبر است یا منقضی شده است.";
+      setError(msg);
+      toast.error(msg, "خطای اعتبارسنجی");
     } finally {
       setIsLoading(false);
     }
@@ -94,113 +204,224 @@ function RegisterContent() {
         {/* Top Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex h-12 w-12 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 items-center justify-center shadow-lg shadow-sky-500/25 text-white mb-2">
-            <UserPlus className="h-6 w-6" />
+            {step === "details" ? <UserPlus className="h-6 w-6" /> : <KeyRound className="h-6 w-6" />}
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            ایجاد حساب کاربری جدید
+            {step === "details" ? "ایجاد حساب کاربری جدید" : "تایید شماره موبایل"}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            مشخصات خود را جهت ثبت و ورود به سامانه وارد فرمایید
+            {step === "details"
+              ? "مشخصات خود را جهت دریافت کد تایید وارد فرمایید"
+              : `کد تایید ۶ رقمی به شماره ${phoneNumber} پیامک شد`}
           </p>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+            {error.includes("وارد شوید") && (
+              <Link
+                href={`/login?identifier=${encodeURIComponent(phoneNumber)}`}
+                className="underline font-bold shrink-0 hover:text-rose-700 dark:hover:text-rose-300"
+              >
+                ورود
+              </Link>
+            )}
           </div>
         )}
 
         {/* Form Card */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 shadow-xl shadow-slate-950/5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                نام و نام خانوادگی
-              </label>
-              <div className="relative">
-                <User className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="علی رضایی"
-                  className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all"
-                />
+          {step === "details" ? (
+            <form onSubmit={handleRequestOTP} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  نام و نام خانوادگی
+                </label>
+                <div className="relative">
+                  <User className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    maxLength={50}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="علی رضایی"
+                    className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                شماره موبایل
-              </label>
-              <div className="relative">
-                <Smartphone className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  type="tel"
-                  required
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="09121111111"
-                  dir="ltr"
-                  className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left font-mono"
-                />
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  شماره موبایل
+                </label>
+                <div className="relative">
+                  <Smartphone className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="tel"
+                    required
+                    maxLength={11}
+                    value={phoneNumber}
+                    onChange={(e) => {
+                      const norm = normalizeDigitsToEnglish(e.target.value).replace(/\D/g, "");
+                      if (norm.length <= 11) {
+                        setPhoneNumber(norm);
+                      }
+                    }}
+                    placeholder="09121111111"
+                    dir="ltr"
+                    className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left font-mono"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400">کد تایید پیامکی به این شماره ارسال خواهد شد.</p>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                رمز عبور (حداقل ۶ کاراکتر)
-              </label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  dir="ltr"
-                  className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left"
-                />
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  رمز عبور (حداقل ۶ کاراکتر)
+                </label>
+                <div className="relative">
+                  <Lock className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    dir="ltr"
+                    className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                تکرار رمز عبور
-              </label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  dir="ltr"
-                  className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left"
-                />
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  تکرار رمز عبور
+                </label>
+                <div className="relative">
+                  <Lock className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    dir="ltr"
+                    className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left"
+                  />
+                </div>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-medium text-sm shadow-md shadow-sky-600/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {isLoading ? (
-                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span>ثبت‌نام و ورود</span>
-                  <ArrowRight className="h-4 w-4" />
-                </>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-medium text-sm shadow-md shadow-sky-600/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-2"
+              >
+                {isLoading ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>دریافت کد تایید و ادامه</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            /* Step 2: OTP Verification Form */
+            <form onSubmit={handleVerifyOTP} className="space-y-5">
+              <div className="p-3 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/40 rounded-xl flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-sky-800 dark:text-sky-300">
+                  <Smartphone className="h-4 w-4 shrink-0 text-sky-600" />
+                  <span className="font-mono dir-ltr">{phoneNumber}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("details");
+                    setError(null);
+                  }}
+                  className="text-sky-600 dark:text-sky-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  <span>تغییر شماره</span>
+                </button>
+              </div>
+
+              {debugCode && (
+                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-between">
+                  <span className="font-medium">کد محیط آزمایشی (Debug):</span>
+                  <span className="font-mono font-bold tracking-widest text-sm">{debugCode}</span>
+                </div>
               )}
-            </button>
-          </form>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 text-center block">
+                  کد تایید ۶ رقمی پیامک شده را وارد فرمایید
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoFocus
+                    required
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => {
+                      const clean = normalizeDigitsToEnglish(e.target.value).replace(/\D/g, "");
+                      if (clean.length <= 6) {
+                        setOtpCode(clean);
+                      }
+                    }}
+                    placeholder="• • • • • •"
+                    className="w-full py-3.5 px-4 text-center tracking-[0.6em] text-2xl font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Countdown / Resend */}
+              <div className="text-center">
+                {countdown > 0 ? (
+                  <div className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <RotateCcw className="h-3.5 w-3.5 animate-spin" />
+                    <span>ارسال مجدد کد پس از</span>
+                    <span className="font-mono font-bold text-sky-600 dark:text-sky-400">{countdown}</span>
+                    <span>ثانیه</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleRequestOTP()}
+                    className="text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 font-semibold hover:underline inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span>ارسال مجدد کد تایید</span>
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || otpCode.length < 4}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-medium text-sm shadow-md shadow-sky-600/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>تکمیل ثبت‌نام و ورود به سامانه</span>
+                  </>
+                )}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* Login footer link */}

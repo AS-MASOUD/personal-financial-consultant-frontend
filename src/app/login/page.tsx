@@ -15,6 +15,7 @@ import {
   Smartphone,
   RotateCcw,
 } from "lucide-react";
+import { normalizeDigitsToEnglish, isValidIranPhone } from "@/lib/utils";
 
 export default function LoginPage() {
   const { login, requestOTP, loginWithOTP } = useAuth();
@@ -64,9 +65,19 @@ export default function LoginPage() {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier.trim()) {
+    const cleanId = normalizeDigitsToEnglish(identifier).trim();
+    if (!cleanId) {
       toast.error("لطفاً شماره موبایل یا ایمیل خود را وارد نمایید.", "فیلد الزامی");
       return;
+    }
+    if (!cleanId.includes("@")) {
+      if (!isValidIranPhone(cleanId)) {
+        toast.error(
+          "شماره موبایل نامعتبر است. شماره باید با 09 شروع شده و ۱۱ رقم باشد (مثال: 09123456789).",
+          "شماره موبایل نامعتبر"
+        );
+        return;
+      }
     }
     if (!password) {
       toast.error("لطفاً رمز عبور را وارد نمایید.", "فیلد الزامی");
@@ -77,7 +88,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login({ identifier: identifier.trim(), password });
+      await login({ identifier: cleanId, password });
       toast.success("ورود با موفقیت انجام شد. خوش آمدید!", "ورود موفق");
       router.push("/");
     } catch (err: unknown) {
@@ -89,7 +100,7 @@ export default function LoginPage() {
         errorObj.message?.includes("ثبت‌نام");
 
       if (isNotFound) {
-        handleUserNotFoundRedirect(identifier);
+        handleUserNotFoundRedirect(cleanId);
       } else {
         const msg = errorObj.message || "رمز عبور وارد شده نادرست است.";
         setError(msg);
@@ -101,12 +112,21 @@ export default function LoginPage() {
   };
 
   const handleRequestOTP = async () => {
-    const cleanId = identifier.trim();
+    const cleanId = normalizeDigitsToEnglish(identifier).trim();
     if (!cleanId) {
       const msg = "لطفاً شماره موبایل یا ایمیل خود را وارد نمایید.";
       setError(msg);
       toast.error(msg, "فیلد الزامی");
       return;
+    }
+
+    if (!cleanId.includes("@")) {
+      if (!isValidIranPhone(cleanId)) {
+        const msg = "شماره موبایل نامعتبر است. شماره باید با 09 شروع شده و ۱۱ رقم باشد (مثال: 09123456789).";
+        setError(msg);
+        toast.error(msg, "شماره موبایل نامعتبر");
+        return;
+      }
     }
 
     setError(null);
@@ -145,7 +165,8 @@ export default function LoginPage() {
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanCode = otpCode.trim();
+    const cleanId = normalizeDigitsToEnglish(identifier).trim();
+    const cleanCode = normalizeDigitsToEnglish(otpCode).trim();
     if (!cleanCode) {
       const msg = "لطفاً کد تایید را وارد نمایید.";
       setError(msg);
@@ -157,7 +178,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await loginWithOTP(identifier.trim(), cleanCode);
+      await loginWithOTP(cleanId, cleanCode);
       toast.success("ورود موفقیت‌آمیز بود. خوش آمدید!", "ورود موفق");
       router.push("/");
     } catch (err: unknown) {
@@ -169,7 +190,7 @@ export default function LoginPage() {
         errorObj.message?.includes("ثبت‌نام");
 
       if (isNotFound) {
-        handleUserNotFoundRedirect(identifier);
+        handleUserNotFoundRedirect(cleanId);
       } else {
         const msg = errorObj.message || "کد وارد شده نامعتبر یا منقضی شده است.";
         setError(msg);
@@ -195,7 +216,7 @@ export default function LoginPage() {
             <ShieldCheck className="h-6 w-6" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            ورود به سامانه فرماندهی مالی
+            ورود به سامانه مدیریت مالی
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             ورود ایمن با شماره موبایل یا ایمیل
@@ -270,7 +291,14 @@ export default function LoginPage() {
                     type="text"
                     required
                     value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
+                    onChange={(e) => {
+                      const val = normalizeDigitsToEnglish(e.target.value);
+                      if (!val.includes("@") && /^\d+$/.test(val)) {
+                        if (val.length <= 11) setIdentifier(val);
+                      } else {
+                        setIdentifier(val);
+                      }
+                    }}
                     placeholder="09121111111 یا user@example.com"
                     dir="ltr"
                     className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left font-mono"
@@ -329,7 +357,14 @@ export default function LoginPage() {
                       required
                       disabled={otpSent && countdown > 0}
                       value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
+                      onChange={(e) => {
+                        const val = normalizeDigitsToEnglish(e.target.value);
+                        if (!val.includes("@") && /^\d+$/.test(val)) {
+                          if (val.length <= 11) setIdentifier(val);
+                        } else {
+                          setIdentifier(val);
+                        }
+                      }}
                       placeholder="09121111111 یا user@example.com"
                       dir="ltr"
                       className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left font-mono disabled:opacity-70"

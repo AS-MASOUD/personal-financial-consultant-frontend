@@ -25,7 +25,7 @@ export function MetricCard({
   change,
   changePeriod = "نسبت به ماه گذشته",
   isCurrency = true,
-  currency = "USD",
+  currency = "TOMAN",
   icon: Icon,
   variant = "default",
   className,

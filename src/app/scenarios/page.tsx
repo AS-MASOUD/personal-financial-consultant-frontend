@@ -16,14 +16,14 @@ import { ScenarioSimulationResponse } from "@/types/financial";
 import { useCurrency } from "@/components/currency-provider";
 
 export default function ScenariosPage() {
-  const { formatMoney } = useCurrency();
+  const { currency, exchangeRate, formatMoney } = useCurrency();
   const [horizonMonths, setHorizonMonths] = useState(36);
-  const [incomeDelta, setIncomeDelta] = useState("1000");
-  const [expenseDelta, setExpenseDelta] = useState("-250");
-  const [growthRate, setGrowthRate] = useState("7.5");
+  const [incomeDelta, setIncomeDelta] = useState("5000000");
+  const [expenseDelta, setExpenseDelta] = useState("-1000000");
+  const [growthRate, setGrowthRate] = useState("25.0");
   const [newLoanAmount, setNewLoanAmount] = useState("0");
-  const [newLoanRate, setNewLoanRate] = useState("6.5");
-  const [newLoanTerm, setNewLoanTerm] = useState(60);
+  const [newLoanRate, setNewLoanRate] = useState("18.0");
+  const [newLoanTerm, setNewLoanTerm] = useState(24);
   const [windfall, setWindfall] = useState("0");
 
   const [result, setResult] = useState<ScenarioSimulationResponse | null>(null);
@@ -54,13 +54,22 @@ export default function ScenariosPage() {
 
   const chartData = React.useMemo(() => {
     if (!result || !result.monthly_projections) return [];
-    return result.monthly_projections.map((p) => ({
-      month: `ماه ${p.month}`,
-      netWorth: parseFloat(p.projected_net_worth),
-      liquid: parseFloat(p.projected_liquid_cash),
-      liabilities: parseFloat(p.projected_liabilities),
-    }));
-  }, [result]);
+    const factor = currency === "USD" ? 1 / exchangeRate : 1;
+    return result.monthly_projections.map((p) => {
+      const rawNw = parseFloat(p.projected_net_worth) || 0;
+      const rawLiq = parseFloat(p.projected_liquid_cash) || 0;
+      const rawLiab = parseFloat(p.projected_liabilities) || 0;
+      return {
+        month: `ماه ${p.month}`,
+        netWorth: rawNw * factor,
+        liquid: rawLiq * factor,
+        liabilities: rawLiab * factor,
+        rawNetWorth: rawNw,
+        rawLiquid: rawLiq,
+        rawLiabilities: rawLiab,
+      };
+    });
+  }, [result, currency, exchangeRate]);
 
   return (
     <div className="space-y-6">
@@ -113,11 +122,11 @@ export default function ScenariosPage() {
 
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                تغییر در درآمد ماهانه ($ پایه)
+                تغییر در درآمد ماهانه (تومان)
               </label>
               <input
                 type="number"
-                placeholder="+1500 یا -500"
+                placeholder="+10000000 یا -5000000"
                 value={incomeDelta}
                 onChange={(e) => setIncomeDelta(e.target.value)}
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold font-mono"
@@ -126,11 +135,11 @@ export default function ScenariosPage() {
 
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                تغییر در هزینه ماهانه ($ پایه)
+                تغییر در هزینه ماهانه (تومان)
               </label>
               <input
                 type="number"
-                placeholder="-300 یا +400"
+                placeholder="-3000000 یا +4000000"
                 value={expenseDelta}
                 onChange={(e) => setExpenseDelta(e.target.value)}
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold font-mono"
@@ -144,7 +153,7 @@ export default function ScenariosPage() {
               <input
                 type="number"
                 step="0.1"
-                placeholder="7.5"
+                placeholder="25.0"
                 value={growthRate}
                 onChange={(e) => setGrowthRate(e.target.value)}
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold font-mono"
@@ -159,7 +168,7 @@ export default function ScenariosPage() {
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block font-medium text-slate-500 text-[11px] mb-1">
-                    اصل وام ($)
+                    اصل وام (تومان)
                   </label>
                   <input
                     type="number"
@@ -176,7 +185,7 @@ export default function ScenariosPage() {
                   <input
                     type="number"
                     step="0.1"
-                    placeholder="6.5"
+                    placeholder="18.0"
                     value={newLoanRate}
                     onChange={(e) => setNewLoanRate(e.target.value)}
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
@@ -188,7 +197,7 @@ export default function ScenariosPage() {
                   </label>
                   <input
                     type="number"
-                    placeholder="60"
+                    placeholder="24"
                     value={newLoanTerm}
                     onChange={(e) => setNewLoanTerm(parseInt(e.target.value) || 12)}
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
@@ -199,11 +208,11 @@ export default function ScenariosPage() {
 
             <div>
               <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                دریافت وجه نقد غیرمنتظره / پاداش ($ یک‌باره)
+                دریافت وجه نقد غیرمنتظره / پاداش (تومان یک‌باره)
               </label>
               <input
                 type="number"
-                placeholder="مثلاً 15000"
+                placeholder="مثلاً 50000000"
                 value={windfall}
                 onChange={(e) => setWindfall(e.target.value)}
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
@@ -279,9 +288,17 @@ export default function ScenariosPage() {
                     fontSize={11}
                     tickLine={false}
                     axisLine={false}
+                    tickFormatter={(val) =>
+                      currency === "USD"
+                        ? `$${val >= 1000 ? (val / 1000).toFixed(0) + "k" : val.toFixed(0)}`
+                        : `${val >= 1000000 ? (val / 1000000).toFixed(0) + " م.ت" : val >= 1000 ? (val / 1000).toFixed(0) + " ه.ت" : val.toFixed(0)}`
+                    }
                   />
                   <Tooltip
-                    formatter={(val: unknown) => [formatMoney(Number(val)), "ارزش خالص پیش‌بینی‌شده"]}
+                    formatter={(_val: unknown, _name: any, item: any) => [
+                      formatMoney(item?.payload?.rawNetWorth),
+                      "ارزش خالص پیش‌بینی‌شده",
+                    ]}
                     contentStyle={{
                       backgroundColor: "#0f172a",
                       borderColor: "#334155",

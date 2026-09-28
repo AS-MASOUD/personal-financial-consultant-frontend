@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fa" dir="rtl" suppressHydrationWarning>
+    <html lang="fa" dir="rtl" className="dark" suppressHydrationWarning>
       <body className="antialiased">
         <Providers>
           <AppShell>{children}</AppShell>

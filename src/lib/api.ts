@@ -12,6 +12,9 @@ import {
   HistoricalSnapshot,
   Liability,
   LiabilityPayment,
+  MarketQuote,
+  MarketRatesResponse,
+  MarketSyncResultResponse,
   OverviewDashboard,
   ScenarioSimulationRequest,
   ScenarioSimulationResponse,
@@ -19,10 +22,17 @@ import {
 } from "@/types/financial";
 import {
   AuthResponse,
+  FinancialOnboardingInput,
+  FinancialOnboardingResponse,
+  JobBenchmarkResponse,
   NotificationItem,
   NotificationListResponse,
   OTPResponse,
   ProfileUpdateInput,
+  RegisterRequestOTPInput,
+  RegisterVerifyOTPInput,
+  RiskAssessmentInput,
+  RiskOnboardingResponse,
   RoleDefinition,
   SystemRole,
   User,
@@ -111,8 +121,20 @@ export const api = {
       body: JSON.stringify({ identifier, code }),
     }),
 
-  register: (payload: { email?: string; phone_number?: string; password?: string; full_name: string }) =>
+  register: (payload: { email?: string; phone_number?: string; password?: string; full_name: string; code?: string }) =>
     request<AuthResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  requestRegisterOTP: (payload: RegisterRequestOTPInput) =>
+    request<OTPResponse>("/auth/register/otp/request", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  verifyRegisterOTP: (payload: RegisterVerifyOTPInput) =>
+    request<AuthResponse>("/auth/register/otp/verify", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
@@ -134,6 +156,23 @@ export const api = {
   refreshToken: () =>
     request<AuthResponse>("/auth/refresh", {
       method: "POST",
+    }),
+
+  submitFinancialOnboarding: (payload: FinancialOnboardingInput) =>
+    request<FinancialOnboardingResponse>("/auth/onboarding/financial", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  getJobBenchmark: (job: string, salary: number) => {
+    const query = new URLSearchParams({ job, salary: String(salary) });
+    return request<JobBenchmarkResponse>(`/auth/benchmark?${query.toString()}`);
+  },
+
+  submitRiskOnboarding: (payload: RiskAssessmentInput) =>
+    request<RiskOnboardingResponse>("/auth/onboarding/risk", {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
 
   // Notifications & Market Alerts
@@ -232,6 +271,8 @@ export const api = {
     request<AssetPosition[]>(`/assets/positions${accountId ? `?account_id=${accountId}` : ""}`),
   createAsset: (data: Partial<Asset> & { initial_price: string }) =>
     request<Asset>("/assets", { method: "POST", body: JSON.stringify(data) }),
+  getMarketRates: () => request<MarketRatesResponse>("/assets/market/rates"),
+  syncMarketRates: () => request<MarketSyncResultResponse>("/assets/market/sync", { method: "POST" }),
 
   // Transactions
   getTransactions: (limit = 50, offset = 0) =>

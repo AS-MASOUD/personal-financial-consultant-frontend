@@ -2,7 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { OTPResponse, ProfileUpdateInput, SystemRole, User } from "@/types/auth";
+import {
+  OTPResponse,
+  ProfileUpdateInput,
+  RegisterRequestOTPInput,
+  RegisterVerifyOTPInput,
+  SystemRole,
+  User,
+} from "@/types/auth";
 import { api, tokenStorage } from "@/lib/api";
 
 interface AuthContextType {
@@ -16,7 +23,9 @@ interface AuthContextType {
   login: (credentials: { identifier?: string; email?: string; password: string }) => Promise<User>;
   requestOTP: (identifier: string) => Promise<OTPResponse>;
   loginWithOTP: (identifier: string, code: string) => Promise<User>;
-  register: (payload: { email?: string; phone_number?: string; password?: string; full_name: string }) => Promise<User>;
+  register: (payload: { email?: string; phone_number?: string; password?: string; full_name: string; code?: string }) => Promise<User>;
+  requestRegisterOTP: (payload: RegisterRequestOTPInput) => Promise<OTPResponse>;
+  registerWithOTP: (payload: RegisterVerifyOTPInput) => Promise<User>;
   updateProfile: (payload: ProfileUpdateInput) => Promise<User>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
@@ -27,15 +36,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => tokenStorage.get());
-  const [isLoading, setIsLoading] = useState<boolean>(() => !!tokenStorage.get());
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
 
   useEffect(() => {
     const savedToken = tokenStorage.get();
     if (!savedToken) {
+      setIsLoading(false);
       return;
     }
+
+    setToken(savedToken);
 
     let isMounted = true;
     api
@@ -86,8 +98,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const register = useCallback(
-    async (payload: { email?: string; phone_number?: string; password?: string; full_name: string }): Promise<User> => {
+    async (payload: { email?: string; phone_number?: string; password?: string; full_name: string; code?: string }): Promise<User> => {
       const response = await api.register(payload);
+      tokenStorage.set(response.access_token);
+      setToken(response.access_token);
+      setUser(response.user);
+      return response.user;
+    },
+    []
+  );
+
+  const requestRegisterOTP = useCallback(
+    async (payload: RegisterRequestOTPInput): Promise<OTPResponse> => {
+      return await api.requestRegisterOTP(payload);
+    },
+    []
+  );
+
+  const registerWithOTP = useCallback(
+    async (payload: RegisterVerifyOTPInput): Promise<User> => {
+      const response = await api.verifyRegisterOTP(payload);
       tokenStorage.set(response.access_token);
       setToken(response.access_token);
       setUser(response.user);
@@ -143,12 +173,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       requestOTP,
       loginWithOTP,
       register,
+      requestRegisterOTP,
+      registerWithOTP,
       updateProfile,
       logout,
       refreshProfile,
       hasRole,
     }),
-    [user, token, isLoading, login, requestOTP, loginWithOTP, register, updateProfile, logout, refreshProfile, hasRole]
+    [
+      user,
+      token,
+      isLoading,
+      login,
+      requestOTP,
+      loginWithOTP,
+      register,
+      requestRegisterOTP,
+      registerWithOTP,
+      updateProfile,
+      logout,
+      refreshProfile,
+      hasRole,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

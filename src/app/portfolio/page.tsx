@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPercent } from "@/lib/utils";
 import { useCurrency } from "@/components/currency-provider";
@@ -140,93 +140,108 @@ export default function PortfolioPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-start text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-              <tr>
-                <th className="py-3 px-6 font-semibold text-start">دارایی / نماد</th>
-                <th className="py-3 px-4 font-semibold text-start">دسته‌بندی</th>
-                <th className="py-3 px-4 font-semibold text-end">تعداد / موجودی</th>
-                <th className="py-3 px-4 font-semibold text-end">قیمت لحظه‌ای</th>
-                <th className="py-3 px-4 font-semibold text-end">میانگین بهای خرید</th>
-                <th className="py-3 px-4 font-semibold text-end">ارزش روز</th>
-                <th className="py-3 px-6 font-semibold text-end">سود / زیان دفتری</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {filteredPositions.map((pos) => {
-                const pnl = parseFloat(pos.unrealized_pnl);
-                const pnlPct = parseFloat(pos.unrealized_pnl_percent);
-                const isPositive = pnl >= 0;
+          {filteredPositions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <BarChart3 className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                {selectedClass === "ALL"
+                  ? "هنوز هیچ دارایی ثبت نشده است"
+                  : `هیچ دارایی در دسته «${CLASS_LABELS[selectedClass]}» وجود ندارد`}
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                برای افزودن اولین دارایی، از تب «تراکنش‌ها» اقدام کنید
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-start text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="py-3 px-6 font-semibold text-start">دارایی / نماد</th>
+                  <th className="py-3 px-4 font-semibold text-start">دسته‌بندی</th>
+                  <th className="py-3 px-4 font-semibold text-end">تعداد / موجودی</th>
+                  <th className="py-3 px-4 font-semibold text-end">قیمت لحظه‌ای</th>
+                  <th className="py-3 px-4 font-semibold text-end">میانگین بهای خرید</th>
+                  <th className="py-3 px-4 font-semibold text-end">ارزش روز</th>
+                  <th className="py-3 px-6 font-semibold text-end">سود / زیان دفتری</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {filteredPositions.map((pos) => {
+                  const pnl = parseFloat(pos.unrealized_pnl);
+                  const pnlPct = parseFloat(pos.unrealized_pnl_percent);
+                  const isPositive = pnl >= 0;
 
-                return (
-                  <tr
-                    key={pos.id}
-                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
-                  >
-                    <td className="py-3.5 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center text-xs shrink-0 font-mono">
-                          {pos.asset_symbol.slice(0, 3)}
+                  return (
+                    <tr
+                      key={pos.id}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="py-3.5 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center text-xs shrink-0 font-mono">
+                            {pos.asset_symbol.slice(0, 3)}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 dark:text-slate-100 block font-mono">
+                              {pos.asset_symbol}
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              {pos.asset_name}
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="font-bold text-slate-900 dark:text-slate-100 block font-mono">
-                            {pos.asset_symbol}
-                          </span>
-                          <span className="text-[11px] text-slate-400">
-                            {pos.asset_name}
-                          </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-start">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                          {CLASS_LABELS[pos.asset_class.toUpperCase()] || pos.asset_class}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-end font-medium text-slate-800 dark:text-slate-200 font-mono">
+                        {parseFloat(pos.quantity).toLocaleString("en-US", {
+                          maximumFractionDigits: 6,
+                        })}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-end font-medium text-slate-800 dark:text-slate-200 font-mono">
+                        {formatMoney(pos.current_price)}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-end text-slate-500 font-mono">
+                        {formatMoney(pos.average_cost_basis)}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-end font-bold text-slate-900 dark:text-slate-100 font-mono">
+                        {formatMoney(pos.current_value)}
+                      </td>
+
+                      <td className="py-3.5 px-6 text-end">
+                        <div
+                          className={`inline-flex items-center gap-1 font-semibold font-mono ${
+                            isPositive
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-600 dark:text-rose-400"
+                          }`}
+                        >
+                          {isPositive ? (
+                            <TrendingUp className="h-3 w-3" />
+                          ) : (
+                            <TrendingDown className="h-3 w-3" />
+                          )}
+                          <span>{formatMoney(pnl)}</span>
+                          <span className="text-[11px]">({formatPercent(pnlPct)})</span>
                         </div>
-                      </div>
-                    </td>
-
-                    <td className="py-3.5 px-4 text-start">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                        {CLASS_LABELS[pos.asset_class.toUpperCase()] || pos.asset_class}
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4 text-end font-medium text-slate-800 dark:text-slate-200 font-mono">
-                      {parseFloat(pos.quantity).toLocaleString("en-US", {
-                        maximumFractionDigits: 6,
-                      })}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-end font-medium text-slate-800 dark:text-slate-200 font-mono">
-                      {formatMoney(pos.current_price)}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-end text-slate-500 font-mono">
-                      {formatMoney(pos.average_cost_basis)}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-end font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {formatMoney(pos.current_value)}
-                    </td>
-
-                    <td className="py-3.5 px-6 text-end">
-                      <div
-                        className={`inline-flex items-center gap-1 font-semibold font-mono ${
-                          isPositive
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-600 dark:text-rose-400"
-                        }`}
-                      >
-                        {isPositive ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3" />
-                        )}
-                        <span>{formatMoney(pnl)}</span>
-                        <span className="text-[11px]">({formatPercent(pnlPct)})</span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

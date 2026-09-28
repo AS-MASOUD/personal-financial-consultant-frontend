@@ -43,7 +43,7 @@ export default function GoalsPage() {
         current_amount: currentAmount || "0",
         monthly_contribution: monthlyContribution || "0",
         target_date: targetDate,
-        currency: "USD",
+        currency: "TOMAN",
         status: "in_progress",
       }),
     onSuccess: () => {
@@ -79,94 +79,100 @@ export default function GoalsPage() {
       </div>
 
       {/* Goals Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {goals?.map((goal) => {
-          const pct = parseFloat(goal.progress_percent) || 0;
-          const isCompleted = pct >= 100;
+      {goals && goals.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {goals.map((goal) => {
+            const pct = parseFloat(goal.progress_percent) || 0;
+            const isCompleted = pct >= 100;
 
-          return (
-            <div
-              key={goal.id}
-              className="fin-card p-6 flex flex-col justify-between space-y-5 hover:border-slate-400/50 transition-colors"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                    {CATEGORY_LABELS[goal.category.toLowerCase()] || goal.category}
-                  </span>
-                  <span
-                    className={`text-xs font-bold px-2.5 py-0.5 rounded-full font-mono ${
-                      isCompleted
-                        ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
-                        : "bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400"
-                    }`}
-                  >
-                    {pct.toFixed(0)}% تکمیل شده
-                  </span>
-                </div>
-
-                <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mt-3">
-                  {goal.name}
-                </h3>
-                {goal.notes && (
-                  <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-                    {goal.notes}
-                  </p>
-                )}
-              </div>
-
-              {/* Progress & Target Stats */}
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between font-mono">
-                  <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                    {formatMoney(goal.current_amount)}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    از {formatMoney(goal.target_amount)}
-                  </span>
-                </div>
-
-                <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-sky-500 to-indigo-500 h-full rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, pct)}%` }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 font-mono">
-                  <span>فاصله تا هدف: {formatMoney(goal.remaining_amount)}</span>
-                  <span>+{formatMoney(goal.monthly_contribution)} / ماه</span>
-                </div>
-              </div>
-
-              {/* Target & Projected Timeline */}
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs space-y-1 text-slate-500 dark:text-slate-400">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                    موعد مقرر هدف:
-                  </span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
-                    {formatDate(goal.target_date)}
-                  </span>
-                </div>
-
-                {goal.projected_completion_date && (
+            return (
+              <div
+                key={goal.id}
+                className="fin-card p-6 flex flex-col justify-between space-y-5 hover:border-slate-400/50 transition-colors"
+              >
+                <div>
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-indigo-400" />
-                      پیش‌بینی زمان تحقق:
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      {CATEGORY_LABELS[goal.category.toLowerCase()] || goal.category}
                     </span>
-                    <span className="font-semibold text-indigo-500 dark:text-indigo-400 font-mono">
-                      {formatDate(goal.projected_completion_date)}
+                    <span
+                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full font-mono ${
+                        isCompleted
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
+                          : "bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400"
+                      }`}
+                    >
+                      {pct.toFixed(0)}% تکمیل شده
                     </span>
                   </div>
-                )}
+
+                  <h3 className="font-bold text-base text-slate-900 dark:text-slate-100 mt-3">
+                    {goal.name}
+                  </h3>
+                  {goal.notes && (
+                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                      {goal.notes}
+                    </p>
+                  )}
+                </div>
+
+                {/* Progress & Target Stats */}
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between font-mono">
+                    <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                      {formatMoney(goal.current_amount)}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      از {formatMoney(goal.target_amount)}
+                    </span>
+                  </div>
+
+                  <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-sky-500 to-indigo-500 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 font-mono">
+                    <span>فاصله تا هدف: {formatMoney(goal.remaining_amount)}</span>
+                    <span>+{formatMoney(goal.monthly_contribution)} / ماه</span>
+                  </div>
+                </div>
+
+                {/* Target & Projected Timeline */}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs space-y-1 text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      موعد مقرر هدف:
+                    </span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
+                      {formatDate(goal.target_date)}
+                    </span>
+                  </div>
+
+                  {goal.projected_completion_date && (
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-indigo-400" />
+                        پیش‌بینی زمان تحقق:
+                      </span>
+                      <span className="font-semibold text-indigo-500 dark:text-indigo-400 font-mono">
+                        {formatDate(goal.projected_completion_date)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="fin-card p-12 text-center text-slate-400 text-xs">
+          هنوز هدف مالی ثبت نکرده‌اید. با کلیک بر روی دکمه «هدف مالی جدید» می‌توانید پس‌انداز هدفمند خود را آغاز کنید.
+        </div>
+      )}
 
       {/* Add Goal Modal */}
       {isAddOpen && (
@@ -227,13 +233,13 @@ export default function GoalsPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    مبلغ کل هدف ($ پایه)
+                    مبلغ کل هدف (تومان)
                   </label>
                   <input
                     type="number"
                     step="any"
                     required
-                    placeholder="25000"
+                    placeholder="100000000"
                     value={targetAmount}
                     onChange={(e) => setTargetAmount(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
@@ -242,7 +248,7 @@ export default function GoalsPage() {
 
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    موجودی ذخیره‌شده فعلی ($)
+                    موجودی ذخیره‌شده فعلی (تومان)
                   </label>
                   <input
                     type="number"
@@ -258,12 +264,12 @@ export default function GoalsPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    واریزی ماهانه ($)
+                    واریزی ماهانه (تومان)
                   </label>
                   <input
                     type="number"
                     step="any"
-                    placeholder="500"
+                    placeholder="5000000"
                     value={monthlyContribution}
                     onChange={(e) => setMonthlyContribution(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import {
   Moon,
   Sun,
@@ -168,7 +168,7 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse font-mono">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -189,7 +189,7 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
                       اعلان‌ها و هشدارهای بازار
                     </span>
                     {unreadCount > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 font-mono">
                         {unreadCount} جدید
                       </span>
                     )}

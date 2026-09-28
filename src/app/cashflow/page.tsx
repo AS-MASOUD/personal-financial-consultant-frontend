@@ -16,7 +16,7 @@ import { formatDate } from "@/lib/utils";
 import { useCurrency } from "@/components/currency-provider";
 
 export default function CashFlowPage() {
-  const { formatMoney } = useCurrency();
+  const { currency, exchangeRate, formatMoney } = useCurrency();
 
   const { data: summary } = useQuery({
     queryKey: ["cashflow-summary"],
@@ -37,6 +37,18 @@ export default function CashFlowPage() {
   const totalExpenses = summary ? parseFloat(summary.total_expenses) : 0;
   const netSavings = summary ? parseFloat(summary.net_savings) : 0;
   const savingsRate = summary ? parseFloat(summary.savings_rate_percent) : 0;
+
+  const expenseBreakdown = React.useMemo(() => {
+    if (!summary?.categories_breakdown) return [];
+    const factor = currency === "USD" ? 1 / exchangeRate : 1;
+    return summary.categories_breakdown
+      .filter((c) => c.flow_type === "expense")
+      .map((c) => ({
+        ...c,
+        scaledAmount: c.amount * factor,
+        rawAmount: c.amount,
+      }));
+  }, [summary, currency, exchangeRate]);
 
   return (
     <div className="space-y-6">
@@ -117,10 +129,10 @@ export default function CashFlowPage() {
           </p>
 
           <div className="h-[280px] w-full">
-            {summary?.categories_breakdown && summary.categories_breakdown.length > 0 ? (
+            {expenseBreakdown && expenseBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={summary.categories_breakdown.filter((c) => c.flow_type === "expense")}
+                  data={expenseBreakdown}
                   margin={{ top: 10, right: 10, left: 10, bottom: 25 }}
                 >
                   <XAxis
@@ -137,9 +149,17 @@ export default function CashFlowPage() {
                     fontSize={11}
                     tickLine={false}
                     axisLine={false}
+                    tickFormatter={(val) =>
+                      currency === "USD"
+                        ? `$${val >= 1000 ? (val / 1000).toFixed(0) + "k" : val.toFixed(0)}`
+                        : `${val >= 1000000 ? (val / 1000000).toFixed(0) + " م.ت" : val >= 1000 ? (val / 1000).toFixed(0) + " ه.ت" : val.toFixed(0)}`
+                    }
                   />
                   <Tooltip
-                    formatter={(val: unknown) => [formatMoney(Number(val)), "هزینه‌شده"]}
+                    formatter={(_val: unknown, _name: any, item: any) => [
+                      formatMoney(item?.payload?.rawAmount),
+                      "هزینه‌شده",
+                    ]}
                     contentStyle={{
                       backgroundColor: "#0f172a",
                       borderColor: "#334155",
@@ -149,12 +169,10 @@ export default function CashFlowPage() {
                       direction: "rtl",
                     }}
                   />
-                  <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                    {summary.categories_breakdown
-                      .filter((c) => c.flow_type === "expense")
-                      .map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color || "#6366f1"} />
-                      ))}
+                  <Bar dataKey="scaledAmount" radius={[6, 6, 0, 0]}>
+                    {expenseBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || "#6366f1"} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -221,61 +239,69 @@ export default function CashFlowPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {entries?.map((entry) => {
-                const isIncome = entry.flow_type === "income";
+              {entries && entries.length > 0 ? (
+                entries.map((entry) => {
+                  const isIncome = entry.flow_type === "income";
 
-                return (
-                  <tr
-                    key={entry.id}
-                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
-                  >
-                    <td className="py-3 px-6 font-medium text-slate-900 dark:text-slate-100">
-                      {entry.description}
-                    </td>
+                  return (
+                    <tr
+                      key={entry.id}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="py-3 px-6 font-medium text-slate-900 dark:text-slate-100">
+                        {entry.description}
+                      </td>
 
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
-                        {entry.category_color && (
-                          <span
-                            className="h-2 w-2 rounded-full shrink-0"
-                            style={{ backgroundColor: entry.category_color }}
-                          />
-                        )}
-                        {entry.category_name || "دسته‌بندی‌نشده"}
-                      </span>
-                    </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
+                          {entry.category_color && (
+                            <span
+                              className="h-2 w-2 rounded-full shrink-0"
+                              style={{ backgroundColor: entry.category_color }}
+                            />
+                          )}
+                          {entry.category_name || "دسته‌بندی‌نشده"}
+                        </span>
+                      </td>
 
-                    <td className="py-3 px-4 text-slate-500 font-mono">
-                      {formatDate(entry.entry_date)}
-                    </td>
+                      <td className="py-3 px-4 text-slate-500 font-mono">
+                        {formatDate(entry.entry_date)}
+                      </td>
 
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          entry.is_recurring
-                            ? "bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-                        }`}
-                      >
-                        {entry.is_recurring ? "تکرارشونده" : "یک‌باره"}
-                      </span>
-                    </td>
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            entry.is_recurring
+                              ? "bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                          }`}
+                        >
+                          {entry.is_recurring ? "تکرارشونده" : "یک‌باره"}
+                        </span>
+                      </td>
 
-                    <td className="py-3 px-6 text-end font-bold text-sm font-mono">
-                      <span
-                        className={
-                          isIncome
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-slate-900 dark:text-slate-100"
-                        }
-                      >
-                        {isIncome ? "+" : "-"}
-                        {formatMoney(entry.amount)}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
+                      <td className="py-3 px-6 text-end font-bold text-sm font-mono">
+                        <span
+                          className={
+                            isIncome
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-slate-900 dark:text-slate-100"
+                          }
+                        >
+                          {isIncome ? "+" : "-"}
+                          {formatMoney(entry.amount)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
+                    هیچ ورودی جریان نقدینگی فعالی برای حساب شما ثبت نشده است.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -21,14 +21,22 @@ import {
   KeyRound,
   FileText,
   Clock,
+  Scale,
+  Award,
+  TrendingUp,
+  Coins,
 } from "lucide-react";
 import { SystemRole } from "@/types/auth";
+import { FinancialOnboardingModal } from "@/components/onboarding/financial-onboarding-modal";
+import { RiskAssessmentModal } from "@/components/onboarding/risk-assessment-modal";
+import { normalizeDigitsToEnglish, isValidIranPhone, isValidFullName } from "@/lib/utils";
 
 export default function ProfilePage() {
   const { user, updateProfile, refreshProfile, isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
 
   // Profile Edit State
+  const [mounted, setMounted] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -36,6 +44,14 @@ export default function ProfilePage() {
   const [job, setJob] = useState("");
   const [bio, setBio] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Modals State
+  const [showFinancialModal, setShowFinancialModal] = useState(false);
+  const [showRiskModal, setShowRiskModal] = useState(false);
 
   // Password Change State
   const [oldPassword, setOldPassword] = useState("");
@@ -70,15 +86,30 @@ export default function ProfilePage() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!fullName.trim()) {
+    const cleanName = fullName.trim();
+    if (!cleanName) {
       toast.error("نام و نام خانوادگی نمی‌تواند خالی باشد.", "فیلد الزامی");
+      return;
+    }
+
+    if (!isValidFullName(cleanName)) {
+      toast.error("نام و نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر باشد.", "خطای اعتبارسنجی نام");
+      return;
+    }
+
+    const cleanPhone = normalizeDigitsToEnglish(phoneNumber).trim();
+    if (cleanPhone && !isValidIranPhone(cleanPhone)) {
+      toast.error(
+        "شماره موبایل نامعتبر است. شماره باید با 09 شروع شده و دقیقاً ۱۱ رقم باشد (مثال: 09123456789).",
+        "خطای اعتبارسنجی شماره موبایل"
+      );
       return;
     }
 
     setIsSavingProfile(true);
 
     try {
-      const parsedAge = age.trim() ? parseInt(age.trim(), 10) : null;
+      const parsedAge = age.trim() ? parseInt(normalizeDigitsToEnglish(age).trim(), 10) : null;
       if (parsedAge !== null && (isNaN(parsedAge) || parsedAge < 10 || parsedAge > 120)) {
         toast.error("سن وارد شده باید عددی معتبر بین ۱۰ تا ۱۲۰ سال باشد.", "خطای اعتبارسنجی سن");
         setIsSavingProfile(false);
@@ -86,8 +117,8 @@ export default function ProfilePage() {
       }
 
       await updateProfile({
-        full_name: fullName.trim(),
-        phone_number: phoneNumber.trim() || null,
+        full_name: cleanName,
+        phone_number: cleanPhone || null,
         email: email.trim() || null,
         age: parsedAge,
         job: job.trim() || null,
@@ -174,6 +205,14 @@ export default function ProfilePage() {
     }
   };
 
+  const getRiskLevelTitle = (level?: string | null) => {
+    if (!level) return "تعیین نشده";
+    if (level === "conservative" || level.includes("محافظه")) return "محافظه‌کارانه";
+    if (level === "moderate" || level.includes("متعادل")) return "متعادل";
+    if (level === "aggressive" || level.includes("جسور") || level.includes("ریسک")) return "جسورانه / ریسک‌پذیر";
+    return level;
+  };
+
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return "ثبت نشده";
     try {
@@ -190,10 +229,13 @@ export default function ProfilePage() {
     }
   };
 
-  if (authLoading) {
+  if (!mounted || authLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-sm text-slate-500 dark:text-slate-400">
-        در حال بارگذاری مشخصات حساب کاربری...
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
+          <span>در حال بارگذاری مشخصات حساب کاربری...</span>
+        </div>
       </div>
     );
   }
@@ -293,6 +335,218 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Financial Health & Risk Assessment Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Card 1: Financial Profile & Job Benchmark */}
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 shadow-xl shadow-slate-950/5 flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <Briefcase className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    اطلاعات مالی و موقعیت شغلی
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    درآمد، پس‌انداز و شاخص مقایسه‌ای حقوق بازار
+                  </p>
+                </div>
+              </div>
+              {user.has_completed_financial_onboarding ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <CheckCircle2 className="h-3 w-3" />
+                  تکمیل شده
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  نیازمند تکمیل
+                </span>
+              )}
+            </div>
+
+            {user.has_completed_financial_onboarding ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <span className="text-[11px] text-slate-500">عنوان شغل:</span>
+                    <p className="font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                      {user.job || "ثبت نشده"}
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <span className="text-[11px] text-slate-500">درآمد ماهانه:</span>
+                    <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono" dir="ltr">
+                      {Number(user.monthly_income || 0).toLocaleString("en-US")}{" "}
+                      <span className="text-[10px] font-sans text-slate-400 font-normal">تومان</span>
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <span className="text-[11px] text-slate-500">نقدینگی و پس‌انداز:</span>
+                    <p className="font-bold text-slate-900 dark:text-slate-100 mt-0.5 font-mono" dir="ltr">
+                      {Number(user.liquid_assets || 0).toLocaleString("en-US")}{" "}
+                      <span className="text-[10px] font-sans text-slate-400 font-normal">تومان</span>
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <span className="text-[11px] text-slate-500">سرمایه‌گذاری‌ها:</span>
+                    <p className="font-bold text-sky-600 dark:text-sky-400 mt-0.5 font-mono" dir="ltr">
+                      {Number(user.investment_assets || 0).toLocaleString("en-US")}{" "}
+                      <span className="text-[10px] font-sans text-slate-400 font-normal">تومان</span>
+                    </p>
+                  </div>
+                </div>
+
+                {user.financial_goals && user.financial_goals.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-semibold text-slate-500">اهداف مالی برگزیده:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {user.financial_goals.map((g, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
+                <p>
+                  اطلاعات مالی و شغلی شما هنوز ثبت نشده است. با ثبت این اطلاعات، میانگین حقوق بازار برای حوزه کاری شما محاسبه شده و نمودارهای داشبورد فعال می‌شوند.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowFinancialModal(true)}
+            className="w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs shadow-md shadow-sky-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+          >
+            <Briefcase className="h-4 w-4" />
+            <span>
+              {user.has_completed_financial_onboarding
+                ? "ویرایش اطلاعات مالی و محاسبه مجدد"
+                : "تکمیل اطلاعات مالی و شغلی"}
+            </span>
+          </button>
+        </div>
+
+        {/* Card 2: Risk Assessment & Portfolio Allocation */}
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 shadow-xl shadow-slate-950/5 flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <Scale className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    پروفایل روانشناسی ریسک و سبد دارایی
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    سنجش ظرفیت روانی تلاطم و تخصیص بهینه سرمایه‌گذاری
+                  </p>
+                </div>
+              </div>
+              {user.has_completed_risk_onboarding ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <CheckCircle2 className="h-3 w-3" />
+                  آزمون انجام شده
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                  نیازمند ارزیابی
+                </span>
+              )}
+            </div>
+
+            {user.has_completed_risk_onboarding ? (
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+                  <div>
+                    <span className="text-[11px] text-slate-500">سطح ریسک‌پذیری:</span>
+                    <p className="text-xs font-bold text-purple-600 dark:text-purple-400 mt-0.5">
+                      {getRiskLevelTitle(user.risk_level)}
+                    </p>
+                  </div>
+                  <div className="text-left font-mono">
+                    <span className="text-[11px] text-slate-500">امتیاز:</span>
+                    <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mt-0.5" dir="ltr">
+                      {user.risk_score} / 100
+                    </p>
+                  </div>
+                </div>
+
+                {user.portfolio_suggestion && (
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      ترکیب سبد پیشنهادی:
+                    </span>
+                    <div className="grid grid-cols-5 gap-1 text-center">
+                      <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        <div className="text-[9px]">سهام</div>
+                        <div className="text-xs font-bold font-mono">
+                          {user.portfolio_suggestion.equities || 0}%
+                        </div>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        <div className="text-[9px]">طلا</div>
+                        <div className="text-xs font-bold font-mono">
+                          {user.portfolio_suggestion.gold ?? user.portfolio_suggestion.gold_commodity ?? 0}%
+                        </div>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <div className="text-[9px]">درآمد ثابت</div>
+                        <div className="text-xs font-bold font-mono">
+                          {user.portfolio_suggestion.fixed_income || 0}%
+                        </div>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                        <div className="text-[9px]">رمزارز</div>
+                        <div className="text-xs font-bold font-mono">
+                          {user.portfolio_suggestion.crypto || 0}%
+                        </div>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
+                        <div className="text-[9px]">نقدینگی</div>
+                        <div className="text-xs font-bold font-mono">
+                          {user.portfolio_suggestion.cash || 0}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20 text-xs text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
+                <p>
+                  شما هنوز در آزمون ۵ پرسشی روانشناسی ریسک شرکت نکرده‌اید. با پاسخ به این پرسش‌ها، شخصیت سرمایه‌گذاری شما مشخص و درصد تخصیص بهینه سهام، طلا و رمزارز پیشنهاد داده می‌شود.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowRiskModal(true)}
+            className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-md shadow-purple-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+          >
+            <Scale className="h-4 w-4" />
+            <span>
+              {user.has_completed_risk_onboarding
+                ? "شرکت مجدد در آزمون سنجش ریسک"
+                : "شروع آزمون روانشناسی ریسک‌پذیری"}
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Grid: Profile Edit & Password Change */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left 2 Cols: Profile Edit Form */}
@@ -318,6 +572,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     required
+                    maxLength={50}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="مثال: علی رضایی"
@@ -334,8 +589,12 @@ export default function ProfilePage() {
                     <Smartphone className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
                     <input
                       type="tel"
+                      maxLength={11}
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      onChange={(e) => {
+                        const val = normalizeDigitsToEnglish(e.target.value).replace(/\D/g, "");
+                        if (val.length <= 11) setPhoneNumber(val);
+                      }}
                       placeholder="09123456789"
                       dir="ltr"
                       className="w-full pr-10 pl-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all font-mono text-left"
@@ -562,6 +821,35 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Onboarding Modals */}
+      <FinancialOnboardingModal
+        isOpen={showFinancialModal}
+        onClose={() => setShowFinancialModal(false)}
+        onSuccess={async () => {
+          setShowFinancialModal(false);
+          await refreshProfile();
+          toast.success("اطلاعات مالی و شغلی با موفقیت به‌روزرسانی شد.", "به‌روزرسانی موفق");
+        }}
+        initialData={{
+          job: user.job || "",
+          monthly_income: user.monthly_income ? Number(user.monthly_income) : 0,
+          liquid_assets: user.liquid_assets ? Number(user.liquid_assets) : 0,
+          investment_assets: user.investment_assets ? Number(user.investment_assets) : 0,
+          total_liabilities: user.total_liabilities ? Number(user.total_liabilities) : 0,
+          financial_goals: user.financial_goals || [],
+        }}
+      />
+
+      <RiskAssessmentModal
+        isOpen={showRiskModal}
+        onClose={() => setShowRiskModal(false)}
+        onSuccess={async () => {
+          setShowRiskModal(false);
+          await refreshProfile();
+        }}
+        initialAnswers={user.risk_answers || undefined}
+      />
     </div>
   );
 }

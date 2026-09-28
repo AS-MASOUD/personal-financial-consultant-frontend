@@ -9,10 +9,65 @@ export interface User {
   age?: number | null;
   job?: string | null;
   bio?: string | null;
+  monthly_income?: number | string | null;
+  liquid_assets?: number | string | null;
+  investment_assets?: number | string | null;
+  total_liabilities?: number | string | null;
+  financial_goals?: string[] | null;
+  has_completed_financial_onboarding?: boolean;
+  risk_score?: number | null;
+  risk_level?: string | null;
+  risk_answers?: Record<string, number> | null;
+  portfolio_suggestion?: Record<string, number> | null;
+  has_completed_risk_onboarding?: boolean;
   is_active: boolean;
   is_verified: boolean;
   created_at: string;
   last_login_at?: string | null;
+}
+
+export interface JobBenchmarkResponse {
+  job_category: string;
+  average_salary_toman: number | string;
+  min_salary_toman: number | string;
+  max_salary_toman: number | string;
+  user_salary_toman: number | string;
+  comparison_ratio_percent: number;
+  status_fa: string;
+  suggestion_fa: string;
+}
+
+export interface FinancialOnboardingInput {
+  job: string;
+  monthly_income: number;
+  liquid_assets: number;
+  investment_assets: number;
+  total_liabilities: number;
+  financial_goals: string[];
+}
+
+export interface FinancialOnboardingResponse {
+  user: User;
+  benchmark: JobBenchmarkResponse;
+  message: string;
+}
+
+export interface RiskAssessmentInput {
+  answers: Record<string, number>;
+}
+
+export interface RiskAssessmentResult {
+  total_score: number;
+  risk_level: string;
+  risk_title_fa: string;
+  description_fa: string;
+  portfolio_suggestion: Record<string, number>;
+}
+
+export interface RiskOnboardingResponse {
+  user: User;
+  risk_result: RiskAssessmentResult;
+  message: string;
 }
 
 export interface ProfileUpdateInput {
@@ -38,6 +93,21 @@ export interface OTPResponse {
   cooldown_seconds: number;
   debug_code?: string | null;
   message: string;
+}
+
+export interface RegisterRequestOTPInput {
+  full_name: string;
+  phone_number: string;
+  email?: string;
+  password?: string;
+}
+
+export interface RegisterVerifyOTPInput {
+  full_name: string;
+  phone_number: string;
+  email?: string;
+  password?: string;
+  code: string;
 }
 
 export interface NotificationItem {

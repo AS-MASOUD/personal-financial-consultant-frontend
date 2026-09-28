@@ -42,7 +42,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 
   const formatMoney = (
     amount: number | string | null | undefined,
-    baseCurrency = "USD"
+    baseCurrency = "TOMAN"
   ): string => {
     if (amount === null || amount === undefined) {
       return currency === "TOMAN" ? "0 تومان" : "$0.00";
@@ -84,7 +84,8 @@ export function useCurrency() {
       setCurrency: () => {},
       toggleCurrency: () => {},
       exchangeRate: 100000,
-      formatMoney: (amount: number | string | null | undefined) => formatCurrency(amount, "TOMAN"),
+      formatMoney: (amount: number | string | null | undefined, baseCurrency = "TOMAN") =>
+        formatCurrency(amount, "TOMAN"),
     };
   }
   return context;

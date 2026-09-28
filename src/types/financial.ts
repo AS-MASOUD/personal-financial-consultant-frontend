@@ -22,6 +22,36 @@ export interface Asset {
   notes?: string | null;
 }
 
+export interface MarketQuote {
+  symbol: string;
+  name: string;
+  name_en?: string | null;
+  category: "gold_coin" | "commodity" | "currency" | "crypto" | string;
+  price: number | string;
+  unit: string;
+  change_percent?: number | null;
+  price_toman?: number | string | null;
+  updated_at?: string | null;
+}
+
+export interface MarketRatesResponse {
+  gold_and_coins: MarketQuote[];
+  commodities: MarketQuote[];
+  currencies: MarketQuote[];
+  cryptocurrency: MarketQuote[];
+  usd_toman_rate?: number | string | null;
+  last_sync_time?: string | null;
+  sync_source: string;
+}
+
+export interface MarketSyncResultResponse {
+  success: boolean;
+  message: string;
+  updated_assets_count: number;
+  total_quotes_fetched: number;
+  last_sync_time: string;
+}
+
 export interface AssetPosition {
   id: string;
   account_id: string;

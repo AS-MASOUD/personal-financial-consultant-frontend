@@ -21,10 +21,10 @@ export default function LiabilitiesPage() {
   const [activeTab, setActiveTab] = useState<"loans" | "calculator">("loans");
   const { formatMoney } = useCurrency();
 
-  // Calculator inputs
-  const [calcPrincipal, setCalcPrincipal] = useState("250000");
-  const [calcRate, setCalcRate] = useState("6.25");
-  const [calcTerm, setCalcTerm] = useState("360");
+  // Calculator inputs (defaults in Toman)
+  const [calcPrincipal, setCalcPrincipal] = useState("50000000");
+  const [calcRate, setCalcRate] = useState("18.0");
+  const [calcTerm, setCalcTerm] = useState("24");
 
   const { data: liabilities } = useQuery({
     queryKey: ["liabilities"],
@@ -141,79 +141,85 @@ export default function LiabilitiesPage() {
           </div>
 
           {/* Liabilities Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {liabilities?.map((l) => {
-              const repaidPct = parseFloat(l.repaid_percent) || 0;
-              const isHighRate = parseFloat(l.interest_rate_percent) > 10;
+          {liabilities && liabilities.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {liabilities.map((l) => {
+                const repaidPct = parseFloat(l.repaid_percent) || 0;
+                const isHighRate = parseFloat(l.interest_rate_percent) > 10;
 
-              return (
-                <div
-                  key={l.id}
-                  className="fin-card p-5 flex flex-col justify-between space-y-4 hover:border-slate-400/50 transition-colors"
-                >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                        {LIABILITY_LABELS[l.liability_type.toLowerCase()] || l.liability_type}
-                      </span>
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full font-mono ${
-                          isHighRate
-                            ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                        }`}
-                      >
-                        {parseFloat(l.interest_rate_percent).toFixed(2)}% سود سالانه
-                      </span>
+                return (
+                  <div
+                    key={l.id}
+                    className="fin-card p-5 flex flex-col justify-between space-y-4 hover:border-slate-400/50 transition-colors"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          {LIABILITY_LABELS[l.liability_type.toLowerCase()] || l.liability_type}
+                        </span>
+                        <span
+                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full font-mono ${
+                            isHighRate
+                              ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                          }`}
+                        >
+                          {parseFloat(l.interest_rate_percent).toFixed(2)}% سود سالانه
+                        </span>
+                      </div>
+
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-3">
+                        {l.name}
+                      </h3>
+                      {l.lender && (
+                        <span className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                          <Building className="h-3 w-3" />
+                          {l.lender}
+                        </span>
+                      )}
                     </div>
 
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-3">
-                      {l.name}
-                    </h3>
-                    {l.lender && (
-                      <span className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                        <Building className="h-3 w-3" />
-                        {l.lender}
+                    {/* Balance & Repayment Progress */}
+                    <div className="space-y-2">
+                      <div className="flex items-baseline justify-between font-mono">
+                        <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                          {formatMoney(l.current_balance)}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          از {formatMoney(l.original_principal)}
+                        </span>
+                      </div>
+
+                      <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, repaidPct)}%` }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                        <span>{repaidPct.toFixed(1)}% از اصل وام تسویه شده</span>
+                        <span>{formatMoney(l.repaid_amount)} پرداخت‌شده</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        تعهد قسط ماهانه:
                       </span>
-                    )}
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
+                        {formatMoney(l.monthly_payment)} / ماه
+                      </span>
+                    </div>
                   </div>
-
-                  {/* Balance & Repayment Progress */}
-                  <div className="space-y-2">
-                    <div className="flex items-baseline justify-between font-mono">
-                      <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                        {formatMoney(l.current_balance)}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        از {formatMoney(l.original_principal)}
-                      </span>
-                    </div>
-
-                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(100, repaidPct)}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                      <span>{repaidPct.toFixed(1)}% از اصل وام تسویه شده</span>
-                      <span>{formatMoney(l.repaid_amount)} پرداخت‌شده</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-slate-500 dark:text-slate-400">
-                      تعهد قسط ماهانه:
-                    </span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {formatMoney(l.monthly_payment)} / ماه
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="fin-card p-12 text-center text-slate-400 text-xs">
+              هیچ بدهی یا تسهیلات بانکی فعالی برای حساب شما ثبت نشده است.
+            </div>
+          )}
         </>
       ) : (
         /* Amortization Calculator Engine */
@@ -226,7 +232,7 @@ export default function LiabilitiesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  مبلغ اصل وام ($ پایه)
+                  مبلغ اصل وام (تومان)
                 </label>
                 <input
                   type="number"
