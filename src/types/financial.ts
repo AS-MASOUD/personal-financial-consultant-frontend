@@ -18,6 +18,7 @@ export interface Asset {
   asset_class: string;
   currency: string;
   current_price: string;
+  is_active: boolean;
   price_updated_at?: string | null;
   notes?: string | null;
 }

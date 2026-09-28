@@ -265,12 +265,34 @@ export const api = {
   deleteAccount: (id: string) => request<void>(`/accounts/${id}`, { method: "DELETE" }),
 
   // Assets & Positions
-  getAssets: (assetClass?: string) =>
-    request<Asset[]>(`/assets${assetClass ? `?asset_class=${assetClass}` : ""}`),
+  getAssets: (filter?: string | { asset_class?: string; is_active?: boolean }) => {
+    const query = new URLSearchParams();
+    if (typeof filter === "string") {
+      if (filter) query.append("asset_class", filter);
+    } else if (filter) {
+      if (filter.asset_class) query.append("asset_class", filter.asset_class);
+      if (filter.is_active !== undefined) query.append("is_active", String(filter.is_active));
+    }
+    const qs = query.toString();
+    return request<Asset[]>(`/assets${qs ? `?${qs}` : ""}`);
+  },
   getPositions: (accountId?: string) =>
     request<AssetPosition[]>(`/assets/positions${accountId ? `?account_id=${accountId}` : ""}`),
+  updatePosition: (
+    id: string,
+    data: { quantity?: string | number; average_cost_basis?: string | number }
+  ) =>
+    request<AssetPosition>(`/assets/positions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deletePosition: (id: string) =>
+    request<void>(`/assets/positions/${id}`, { method: "DELETE" }),
   createAsset: (data: Partial<Asset> & { initial_price: string }) =>
     request<Asset>("/assets", { method: "POST", body: JSON.stringify(data) }),
+  updateAsset: (id: string, data: Partial<Asset> & Record<string, unknown>) =>
+    request<Asset>(`/assets/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteAsset: (id: string) => request<void>(`/assets/${id}`, { method: "DELETE" }),
   getMarketRates: () => request<MarketRatesResponse>("/assets/market/rates"),
   syncMarketRates: () => request<MarketSyncResultResponse>("/assets/market/sync", { method: "POST" }),
 
@@ -284,6 +306,8 @@ export const api = {
   getLiabilities: () => request<Liability[]>("/liabilities"),
   createLiability: (data: Record<string, unknown>) =>
     request<Liability>("/liabilities", { method: "POST", body: JSON.stringify(data) }),
+  deleteLiability: (id: string) =>
+    request<void>(`/liabilities/${id}`, { method: "DELETE" }),
   recordLoanPayment: (data: Record<string, unknown>) =>
     request<LiabilityPayment>("/liabilities/payments", { method: "POST", body: JSON.stringify(data) }),
   calculateAmortization: (principal: number, interestRate: number, termMonths: number) =>
@@ -303,6 +327,10 @@ export const api = {
   getGoals: () => request<FinancialGoal[]>("/goals"),
   createGoal: (data: Record<string, unknown>) =>
     request<FinancialGoal>("/goals", { method: "POST", body: JSON.stringify(data) }),
+  updateGoal: (id: string, data: Record<string, unknown>) =>
+    request<FinancialGoal>(`/goals/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteGoal: (id: string) =>
+    request<void>(`/goals/${id}`, { method: "DELETE" }),
 
   // Scenarios
   simulateScenario: (payload: ScenarioSimulationRequest) =>

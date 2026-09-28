@@ -25,7 +25,8 @@ function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialIdentifier = searchParams.get("phone") || searchParams.get("identifier") || "";
+  const initialIdentifier =
+    searchParams.get("phone") || searchParams.get("identifier") || "";
 
   // Step state: "details" -> "otp"
   const [step, setStep] = useState<"details" | "otp">("details");
@@ -53,7 +54,10 @@ function RegisterContent() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const validateDetails = (): { cleanName: string; cleanPhone: string } | null => {
+  const validateDetails = (): {
+    cleanName: string;
+    cleanPhone: string;
+  } | null => {
     const cleanName = fullName.trim();
     const cleanPhone = normalizeDigitsToEnglish(phoneNumber).replace(/\D/g, "");
 
@@ -79,7 +83,8 @@ function RegisterContent() {
     }
 
     if (!isValidIranPhone(cleanPhone)) {
-      const msg = "شماره موبایل نامعتبر است. شماره باید با 09 شروع شده و دقیقاً ۱۱ رقم باشد (مثال: 09123456789).";
+      const msg =
+        "شماره موبایل نامعتبر است. شماره باید با 09 شروع شده و دقیقاً ۱۱ رقم باشد (مثال: 09123456789).";
       setError(msg);
       toast.error(msg, "شماره موبایل نامعتبر");
       return null;
@@ -133,7 +138,7 @@ function RegisterContent() {
       setStep("otp");
       toast.success(
         `کد تایید یکبار مصرف به شماره ${valid.cleanPhone} پیامک شد.`,
-        "کد تایید ارسال شد"
+        "کد تایید ارسال شد",
       );
     } catch (err: unknown) {
       const errorObj = err as Error & { code?: string; status?: number };
@@ -144,7 +149,8 @@ function RegisterContent() {
         errorObj.message?.includes("ثبت شده است");
 
       if (isConflict) {
-        const conflictMsg = "کاربری با این شماره موبایل قبلاً در سامانه ثبت‌نام کرده است. لطفاً وارد شوید.";
+        const conflictMsg =
+          "کاربری با این شماره موبایل قبلاً در سامانه ثبت‌نام کرده است. لطفاً وارد شوید.";
         setError(conflictMsg);
         toast.error(conflictMsg, "حساب قبلاً وجود دارد");
       } else {
@@ -186,11 +192,15 @@ function RegisterContent() {
         code: cleanCode,
       });
 
-      toast.success("ثبت‌نام شما با موفقیت انجام شد. خوش آمدید!", "ثبت‌نام موفق");
+      toast.success(
+        "ثبت‌نام شما با موفقیت انجام شد. خوش آمدید!",
+        "ثبت‌نام موفق",
+      );
       router.push("/?onboarding=1");
     } catch (err: unknown) {
       const errorObj = err as Error & { code?: string; status?: number };
-      const msg = errorObj.message || "کد تایید وارد شده نامعتبر است یا منقضی شده است.";
+      const msg =
+        errorObj.message || "کد تایید وارد شده نامعتبر است یا منقضی شده است.";
       setError(msg);
       toast.error(msg, "خطای اعتبارسنجی");
     } finally {
@@ -204,10 +214,16 @@ function RegisterContent() {
         {/* Top Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex h-12 w-12 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-600 items-center justify-center shadow-lg shadow-sky-500/25 text-white mb-2">
-            {step === "details" ? <UserPlus className="h-6 w-6" /> : <KeyRound className="h-6 w-6" />}
+            {step === "details" ? (
+              <UserPlus className="h-6 w-6" />
+            ) : (
+              <KeyRound className="h-6 w-6" />
+            )}
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            {step === "details" ? "ایجاد حساب کاربری جدید" : "تایید شماره موبایل"}
+            {step === "details"
+              ? "ایجاد حساب کاربری جدید"
+              : "تایید شماره موبایل"}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {step === "details"
@@ -268,7 +284,9 @@ function RegisterContent() {
                     maxLength={11}
                     value={phoneNumber}
                     onChange={(e) => {
-                      const norm = normalizeDigitsToEnglish(e.target.value).replace(/\D/g, "");
+                      const norm = normalizeDigitsToEnglish(
+                        e.target.value,
+                      ).replace(/\D/g, "");
                       if (norm.length <= 11) {
                         setPhoneNumber(norm);
                       }
@@ -278,7 +296,9 @@ function RegisterContent() {
                     className="w-full pr-10 pl-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-950/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 transition-all text-left font-mono"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400">کد تایید پیامکی به این شماره ارسال خواهد شد.</p>
+                <p className="text-[11px] text-slate-400">
+                  کد تایید پیامکی به این شماره ارسال خواهد شد.
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -353,13 +373,6 @@ function RegisterContent() {
                 </button>
               </div>
 
-              {debugCode && (
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center justify-between">
-                  <span className="font-medium">کد محیط آزمایشی (Debug):</span>
-                  <span className="font-mono font-bold tracking-widest text-sm">{debugCode}</span>
-                </div>
-              )}
-
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 text-center block">
                   کد تایید ۶ رقمی پیامک شده را وارد فرمایید
@@ -373,7 +386,9 @@ function RegisterContent() {
                     maxLength={6}
                     value={otpCode}
                     onChange={(e) => {
-                      const clean = normalizeDigitsToEnglish(e.target.value).replace(/\D/g, "");
+                      const clean = normalizeDigitsToEnglish(
+                        e.target.value,
+                      ).replace(/\D/g, "");
                       if (clean.length <= 6) {
                         setOtpCode(clean);
                       }
@@ -390,7 +405,9 @@ function RegisterContent() {
                   <div className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                     <RotateCcw className="h-3.5 w-3.5 animate-spin" />
                     <span>ارسال مجدد کد پس از</span>
-                    <span className="font-mono font-bold text-sky-600 dark:text-sky-400">{countdown}</span>
+                    <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
+                      {countdown}
+                    </span>
                     <span>ثانیه</span>
                   </div>
                 ) : (
@@ -441,7 +458,13 @@ function RegisterContent() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-[85vh] flex items-center justify-center text-sm text-slate-400">در حال بارگذاری...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-[85vh] flex items-center justify-center text-sm text-slate-400">
+          در حال بارگذاری...
+        </div>
+      }
+    >
       <RegisterContent />
     </Suspense>
   );

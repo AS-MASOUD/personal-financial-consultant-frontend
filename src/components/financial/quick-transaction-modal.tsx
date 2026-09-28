@@ -2,8 +2,10 @@
 
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X, Check, Loader2 } from "lucide-react";
+import { X, Check, Loader2, Plus, Edit2, Trash2, CheckCircle2, Calendar } from "lucide-react";
 import { api } from "@/lib/api";
+import { formatDate } from "@/lib/utils";
+import { useUserPlatforms } from "@/hooks/use-user-platforms";
 
 interface QuickTransactionModalProps {
   isOpen: boolean;
@@ -12,22 +14,23 @@ interface QuickTransactionModalProps {
 
 export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModalProps) {
   const queryClient = useQueryClient();
+  const { platforms, addPlatform, editPlatform, deletePlatform } = useUserPlatforms();
 
   const [txType, setTxType] = useState<string>("DEPOSIT");
-  const [accountId, setAccountId] = useState<string>("");
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("");
   const [assetId, setAssetId] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
-  const [fee, setFee] = useState<string>("0");
+  const [txDate, setTxDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { data: accounts } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: () => api.getAccounts(),
-    enabled: isOpen,
-  });
+  // Inline platform management state
+  const [isManagingPlatforms, setIsManagingPlatforms] = useState(false);
+  const [newPlatformName, setNewPlatformName] = useState("");
+  const [editingPlatformOld, setEditingPlatformOld] = useState<string | null>(null);
+  const [editingPlatformNew, setEditingPlatformNew] = useState("");
 
   const { data: assets } = useQuery({
     queryKey: ["assets"],
@@ -35,7 +38,7 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
     enabled: isOpen && (txType === "BUY" || txType === "SELL" || txType === "DIVIDEND"),
   });
 
-  const selectedAccountId = accountId || (accounts && accounts.length > 0 ? accounts[0].id : "");
+  const effectivePlatform = selectedPlatform || (platforms.length > 0 ? platforms[0] : "");
   const selectedAssetId = assetId || (assets && assets.length > 0 ? assets[0].id : "");
 
   const handleQuantityChange = (val: string) => {
@@ -43,7 +46,7 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
     const q = parseFloat(val);
     const p = parseFloat(unitPrice);
     if (!isNaN(q) && !isNaN(p) && (txType === "BUY" || txType === "SELL")) {
-      setAmount((q * p).toFixed(2));
+      setAmount((q * p).toFixed(0));
     }
   };
 
@@ -52,7 +55,7 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
     const q = parseFloat(quantity);
     const p = parseFloat(val);
     if (!isNaN(q) && !isNaN(p) && (txType === "BUY" || txType === "SELL")) {
-      setAmount((q * p).toFixed(2));
+      setAmount((q * p).toFixed(0));
     }
   };
 
@@ -64,30 +67,62 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
       const q = parseFloat(quantity);
       const p = parseFloat(selected.current_price);
       if (!isNaN(q) && !isNaN(p) && (txType === "BUY" || txType === "SELL")) {
-        setAmount((q * p).toFixed(2));
+        setAmount((q * p).toFixed(0));
       }
     }
+  };
+
+  const handleAddNewPlatform = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPlatformName.trim()) return;
+    const ok = addPlatform(newPlatformName.trim());
+    if (ok) {
+      setSelectedPlatform(newPlatformName.trim());
+      setNewPlatformName("");
+    }
+  };
+
+  const handleSaveEditPlatform = (oldName: string) => {
+    if (!editingPlatformNew.trim()) return;
+    editPlatform(oldName, editingPlatformNew.trim());
+    if (selectedPlatform === oldName) {
+      setSelectedPlatform(editingPlatformNew.trim());
+    }
+    setEditingPlatformOld(null);
+    setEditingPlatformNew("");
   };
 
   const mutation = useMutation({
     mutationFn: async () => {
       setErrorMsg(null);
-      if (!selectedAccountId) throw new Error("Please select an account.");
-      if (!amount || parseFloat(amount) <= 0) throw new Error("Please enter a valid amount.");
+      if (!effectivePlatform) {
+        throw new Error("لطفاً پلتفرم یا محل نگهداری دارایی را مشخص کنید.");
+      }
+      if (!amount || parseFloat(amount) <= 0) {
+        throw new Error("لطفاً مبلغ معتبر را به تومان وارد کنید.");
+      }
+
+      let finalDate = new Date();
+      if (txDate) {
+        const [year, month, day] = txDate.split("-").map(Number);
+        if (year && month && day) {
+          finalDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+        }
+      }
 
       const payload: Record<string, unknown> = {
-        account_id: selectedAccountId,
+        platform: effectivePlatform,
         transaction_type: txType,
-        transaction_date: new Date().toISOString(),
+        transaction_date: finalDate.toISOString(),
         total_amount: amount,
-        fee: fee || "0",
+        fee: "0",
         currency: "TOMAN",
         notes: notes || undefined,
       };
 
       if (txType === "BUY" || txType === "SELL") {
-        if (!selectedAssetId) throw new Error("Please select an asset.");
-        if (!quantity || parseFloat(quantity) <= 0) throw new Error("Please enter a valid quantity.");
+        if (!selectedAssetId) throw new Error("لطفاً نماد دارایی را انتخاب کنید.");
+        if (!quantity || parseFloat(quantity) <= 0) throw new Error("لطفاً تعداد یا حجم را مشخص کنید.");
         payload.asset_id = selectedAssetId;
         payload.quantity = quantity;
         payload.unit_price = unitPrice || (parseFloat(amount) / parseFloat(quantity)).toFixed(4);
@@ -103,9 +138,11 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
       setQuantity("");
       setUnitPrice("");
       setNotes("");
+      setTxDate(new Date().toISOString().split("T")[0]);
+      setIsManagingPlatforms(false);
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : "Failed to record transaction";
+      const msg = err instanceof Error ? err.message : "خطا در ثبت تراکنش";
       setErrorMsg(msg);
     },
   });
@@ -114,11 +151,16 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="fin-card w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl p-6 relative">
+      <div className="fin-card w-full max-w-lg bg-white dark:bg-slate-900 shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            ثبت تراکنش جدید
-          </h2>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              ثبت تراکنش جدید
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              ثبت خرید، فروش، واریز یا برداشت در پلتفرم و محل نگهداری دارایی
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -138,8 +180,8 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
           {[
             { id: "DEPOSIT", label: "واریز" },
             { id: "WITHDRAWAL", label: "برداشت" },
-            { id: "BUY", label: "خرید" },
-            { id: "SELL", label: "فروش" },
+            { id: "BUY", label: "خرید دارایی" },
+            { id: "SELL", label: "فروش دارایی" },
           ].map((item) => (
             <button
               key={item.id}
@@ -161,24 +203,121 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
             e.preventDefault();
             mutation.mutate();
           }}
-          className="mt-4 space-y-3 text-xs"
+          className="mt-4 space-y-3.5 text-xs"
         >
-          {/* Target Account */}
-          <div>
-            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-              حساب بانکی یا کارگزاری
-            </label>
+          {/* Platform / Storage Location */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="font-medium text-slate-700 dark:text-slate-300">
+                پلتفرم یا محل نگهداری دارایی
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsManagingPlatforms(!isManagingPlatforms)}
+                className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+              >
+                {isManagingPlatforms ? "بستن مدیریت پلتفرم‌ها" : "+ افزودن / ویرایش پلتفرم‌ها"}
+              </button>
+            </div>
+
             <select
-              value={selectedAccountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              value={effectivePlatform}
+              onChange={(e) => setSelectedPlatform(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
             >
-              {accounts?.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.institution || acc.account_type}) - ${parseFloat(acc.current_balance).toLocaleString()}
+              {platforms.map((p) => (
+                <option key={p} value={p}>
+                  {p}
                 </option>
               ))}
             </select>
+
+            {/* Inline Platform Manager Drawer */}
+            {isManagingPlatforms && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2.5 animate-in fade-in duration-150">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="نام پلتفرم جدید (مثلاً طلای زربد، کارگزاری خوارزمی...)"
+                    value={newPlatformName}
+                    onChange={(e) => setNewPlatformName(e.target.value)}
+                    className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewPlatform}
+                    className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-semibold text-xs flex items-center gap-1 shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>افزودن</span>
+                  </button>
+                </div>
+
+                <div className="max-h-36 overflow-y-auto space-y-1 divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                  {platforms.map((plat) => (
+                    <div key={plat} className="flex items-center justify-between pt-1.5 pb-1 text-[11px]">
+                      {editingPlatformOld === plat ? (
+                        <div className="flex items-center gap-1 flex-1 ml-2">
+                          <input
+                            type="text"
+                            value={editingPlatformNew}
+                            onChange={(e) => setEditingPlatformNew(e.target.value)}
+                            className="flex-1 px-2 py-1 rounded border border-sky-400 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEditPlatform(plat)}
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded"
+                            title="ذخیره"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingPlatformOld(null);
+                              setEditingPlatformNew("");
+                            }}
+                            className="p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                            title="انصراف"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-slate-800 dark:text-slate-200 truncate font-medium">
+                            {plat}
+                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingPlatformOld(plat);
+                                setEditingPlatformNew(plat);
+                              }}
+                              className="p-1 text-slate-400 hover:text-sky-500 rounded"
+                              title="ویرایش نام"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deletePlatform(plat)}
+                              className="p-1 text-slate-400 hover:text-rose-500 rounded"
+                              title="حذف"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Conditional: Asset Selection for BUY/SELL */}
@@ -186,7 +325,7 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
             <>
               <div>
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  نماد یا نام دارایی
+                  دارایی (طلا، ارز، رمزارز، سهام)
                 </label>
                 <select
                   value={selectedAssetId}
@@ -195,24 +334,24 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
                 >
                   {assets?.map((asset) => (
                     <option key={asset.id} value={asset.id}>
-                      {asset.symbol} - {asset.name} (${parseFloat(asset.current_price).toFixed(2)})
+                      {asset.name} ({asset.symbol}) - قیمت: {parseFloat(asset.current_price).toLocaleString()} تومان
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    تعداد / حجم
+                    تعداد / وزن / حجم
                   </label>
                   <input
                     type="number"
                     step="any"
-                    placeholder="مثلاً 5"
+                    placeholder="مثلاً 2.5 گرم یا سهم"
                     value={quantity}
                     onChange={(e) => handleQuantityChange(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
                   />
                 </div>
                 <div>
@@ -232,44 +371,108 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
             </>
           )}
 
-          {/* Total Amount & Fee */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                مبلغ کل (تومان)
+          {/* Transaction / Purchase Date */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-sky-500" />
+                <span>
+                  {txType === "BUY"
+                    ? "تاریخ خرید دارایی (جهت تحلیل سود و بازدهی)"
+                    : txType === "SELL"
+                    ? "تاریخ فروش دارایی"
+                    : "تاریخ انجام تراکنش"}
+                </span>
               </label>
-              <input
-                type="number"
-                step="any"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-semibold font-mono"
-              />
+
+              {/* Quick Presets */}
+              <div className="flex items-center gap-1 overflow-x-auto">
+                {[
+                  { label: "امروز", daysAgo: 0 },
+                  { label: "دیروز", daysAgo: 1 },
+                  { label: "۱ هفته پیش", daysAgo: 7 },
+                  { label: "۲ هفته پیش", daysAgo: 14 },
+                  { label: "۱ ماه پیش", daysAgo: 30 },
+                ].map((chip) => {
+                  const targetDate = new Date();
+                  targetDate.setDate(targetDate.getDate() - chip.daysAgo);
+                  const dateStr = targetDate.toISOString().split("T")[0];
+                  const isSelected = txDate === dateStr;
+
+                  return (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => setTxDate(dateStr)}
+                      className={`text-[10px] px-2 py-0.5 rounded transition-all cursor-pointer whitespace-nowrap ${
+                        isSelected
+                          ? "bg-sky-600 text-white font-bold"
+                          : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div>
-              <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                کارمزد معامله (تومان)
-              </label>
-              <input
-                type="number"
-                step="any"
-                placeholder="0"
-                value={fee}
-                onChange={(e) => setFee(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
-              />
-            </div>
+
+            <input
+              type="date"
+              value={txDate}
+              onChange={(e) => setTxDate(e.target.value)}
+              max={new Date().toISOString().split("T")[0]}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono text-xs"
+            />
+            {txDate && (
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
+                ثبت تاریخ: {formatDate(txDate)}
+                {(() => {
+                  try {
+                    const [y, m, d] = txDate.split("-").map(Number);
+                    const parsed = new Date(y, m - 1, d);
+                    const shamsi = new Intl.DateTimeFormat("fa-IR", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    }).format(parsed);
+                    return ` (${shamsi})`;
+                  } catch {
+                    return "";
+                  }
+                })()}
+              </span>
+            )}
+          </div>
+
+          {/* Total Amount (Fee removed entirely as requested) */}
+          <div>
+            <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+              مبلغ کل تراکنش (تومان)
+            </label>
+            <input
+              type="number"
+              step="any"
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold font-mono text-sm"
+            />
+            {amount && !isNaN(parseFloat(amount)) && (
+              <span className="text-[11px] text-slate-400 mt-1 block font-mono">
+                معادل: {parseFloat(amount).toLocaleString()} تومان
+              </span>
+            )}
           </div>
 
           {/* Notes */}
           <div>
             <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-              یادداشت (اختیاری)
+              یادداشت یا بابت (اختیاری)
             </label>
             <input
               type="text"
-              placeholder="مثلاً خرید پله‌ای ماهانه، واریز سود"
+              placeholder="مثلاً خرید پله‌ای ماهانه طلا، پس‌انداز، انتقال سرمایه"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
