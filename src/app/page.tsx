@@ -18,7 +18,8 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { MetricCard } from "@/components/financial/metric-card";
 import { AttentionBanner } from "@/components/financial/attention-banner";
-import { AllocationDonut, NetWorthChart } from "@/components/financial/financial-charts";
+import { AllocationDonut } from "@/components/financial/financial-charts";
+import { WealthTrajectoryChart } from "@/components/financial/wealth-trajectory-chart";
 import { useCurrency } from "@/components/currency-provider";
 import { useAuth } from "@/components/auth-provider";
 import { FinancialOnboardingModal } from "@/components/onboarding/financial-onboarding-modal";
@@ -198,10 +199,10 @@ export default function OverviewDashboardPage() {
         />
       </div>
 
-      {/* 3. Primary Charts: Net Worth Trajectory & Asset Allocation */}
+      {/* 3. Primary Charts: Wealth Trajectory & Asset Allocation */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <NetWorthChart data={snapshots || []} />
+          <WealthTrajectoryChart />
         </div>
         <div>
           <AllocationDonut data={overview.asset_allocation || []} />

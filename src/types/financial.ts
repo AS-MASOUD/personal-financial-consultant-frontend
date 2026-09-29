@@ -100,6 +100,22 @@ export interface Liability {
   repaid_amount: string;
   repaid_percent: string;
   created_at: string;
+  type_config?: LiabilityTypeConfig | null;
+}
+
+export interface LiabilityTypeConfig {
+  id: string;
+  code: string;
+  label: string;
+  short_label?: string | null;
+  description?: string | null;
+  icon: string;
+  default_rate: string | number;
+  default_term_months: number;
+  is_friend: boolean;
+  direction: "debt" | "claim";
+  display_order: number;
+  is_active: boolean;
 }
 
 export interface AmortizationScheduleItem {
@@ -268,4 +284,76 @@ export interface AIConversation {
   created_at: string;
   updated_at: string;
   messages: AIMessage[];
+}
+
+export interface TrajectoryTimelinePoint {
+  date: string;
+  display_date: string;
+  is_forecast: boolean;
+  total_liabilities: string | number;
+  total_investments: string | number;
+  salary_income: string | number;
+  net_worth: string | number;
+  liquid_cash: string | number;
+  forecast_confidence_upper?: string | number | null;
+  forecast_confidence_lower?: string | number | null;
+  item_values: Record<string, string | number>;
+}
+
+export interface LoanTrajectoryItem {
+  id: string;
+  name: string;
+  liability_type: string;
+  lender?: string | null;
+  original_principal: string | number;
+  current_balance: string | number;
+  interest_rate_percent: string | number;
+  monthly_payment: string | number;
+  start_date: string;
+  maturity_date?: string | null;
+  estimated_payoff_date: string;
+  remaining_months: number;
+  repaid_percent: string | number;
+}
+
+export interface InvestmentTrajectoryItem {
+  id: string;
+  name: string;
+  symbol: string;
+  asset_class: string;
+  current_value: string | number;
+  quantity: string | number;
+  current_price: string | number;
+  unrealized_pnl: string | number;
+  projected_annual_growth_rate: string | number;
+  projected_value_1y: string | number;
+  projected_value_2y: string | number;
+}
+
+export interface IncomeTrajectoryItem {
+  id: string;
+  name: string;
+  flow_type: string;
+  monthly_amount: string | number;
+  annual_amount: string | number;
+  is_recurring: boolean;
+}
+
+export interface WealthTrajectoryResponse {
+  timeline: TrajectoryTimelinePoint[];
+  historical_points_count: number;
+  forecast_points_count: number;
+  baseline_investments: string | number;
+  baseline_liabilities: string | number;
+  baseline_salary: string | number;
+  debt_free_date?: string | null;
+  crossover_date?: string | null;
+  projected_investments_end: string | number;
+  projected_liabilities_end: string | number;
+  projected_total_profit: string | number;
+  total_debt_interest_saved: string | number;
+  ai_narrative: string;
+  loans: LoanTrajectoryItem[];
+  investments: InvestmentTrajectoryItem[];
+  incomes: IncomeTrajectoryItem[];
 }

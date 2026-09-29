@@ -12,6 +12,7 @@ import {
   HistoricalSnapshot,
   Liability,
   LiabilityPayment,
+  LiabilityTypeConfig,
   MarketQuote,
   MarketRatesResponse,
   MarketSyncResultResponse,
@@ -19,6 +20,7 @@ import {
   ScenarioSimulationRequest,
   ScenarioSimulationResponse,
   Transaction,
+  WealthTrajectoryResponse,
 } from "@/types/financial";
 import {
   AuthResponse,
@@ -255,6 +257,14 @@ export const api = {
   getOverview: () => request<OverviewDashboard>("/analytics/overview"),
   getSnapshots: (limit = 90) => request<HistoricalSnapshot[]>(`/analytics/snapshots?limit=${limit}`),
   recordSnapshot: () => request<HistoricalSnapshot>("/analytics/snapshots/record", { method: "POST" }),
+  getWealthTrajectory: (params?: { history_days?: number; forecast_months?: number; annual_growth_override?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.history_days) query.append("history_days", String(params.history_days));
+    if (params?.forecast_months) query.append("forecast_months", String(params.forecast_months));
+    if (params?.annual_growth_override) query.append("annual_growth_override", String(params.annual_growth_override));
+    const qs = query.toString();
+    return request<WealthTrajectoryResponse>(`/analytics/wealth-trajectory${qs ? `?${qs}` : ""}`);
+  },
 
   // Accounts
   getAccounts: (activeOnly = false) =>
@@ -304,10 +314,16 @@ export const api = {
 
   // Liabilities
   getLiabilities: () => request<Liability[]>("/liabilities"),
+  getLiabilityTypes: () => request<LiabilityTypeConfig[]>("/liabilities/types"),
+  getLiabilityLabels: () => request<Record<string, string>>("/liabilities/labels"),
   createLiability: (data: Record<string, unknown>) =>
     request<Liability>("/liabilities", { method: "POST", body: JSON.stringify(data) }),
+  updateLiability: (id: string, data: Record<string, unknown>) =>
+    request<Liability>(`/liabilities/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteLiability: (id: string) =>
     request<void>(`/liabilities/${id}`, { method: "DELETE" }),
+  getLiabilityPayments: (id: string) =>
+    request<LiabilityPayment[]>(`/liabilities/${id}/payments`),
   recordLoanPayment: (data: Record<string, unknown>) =>
     request<LiabilityPayment>("/liabilities/payments", { method: "POST", body: JSON.stringify(data) }),
   calculateAmortization: (principal: number, interestRate: number, termMonths: number) =>

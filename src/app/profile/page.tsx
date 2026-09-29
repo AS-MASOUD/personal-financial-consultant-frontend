@@ -407,7 +407,7 @@ export default function ProfilePage() {
                           key={idx}
                           className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
                         >
-                          {g}
+                          {typeof g === "string" ? g : (g as any)?.name}
                         </span>
                       ))}
                     </div>

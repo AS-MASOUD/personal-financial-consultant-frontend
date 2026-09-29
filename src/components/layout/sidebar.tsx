@@ -25,9 +25,7 @@ import { useAuth } from "@/components/auth-provider";
 
 const navigationItems = [
   { name: "نمای کلی", href: "/", icon: LayoutDashboard },
-  { name: "پروفایل کاربری", href: "/profile", icon: UserCircle },
   { name: "سبد دارایی (پورتفولیو)", href: "/portfolio", icon: PieChart },
-  { name: "فهرست دارایی‌ها", href: "/assets", icon: Coins },
   { name: "دفتر کل تراکنش‌ها", href: "/transactions", icon: ArrowLeftRight },
   { name: "بدهی‌ها و تسهیلات", href: "/liabilities", icon: ShieldAlert },
   { name: "جریان نقدینگی و بودجه", href: "/cashflow", icon: ArrowDownUp },
@@ -35,7 +33,14 @@ const navigationItems = [
   { name: "تحلیل و نسبت‌های مالی", href: "/analytics", icon: LineChart },
   { name: "شبیه‌ساز سناریوها", href: "/scenarios", icon: SlidersHorizontal },
   { name: "دستیار هوشمند مالی", href: "/ai", icon: Bot, highlight: true },
-  { name: "مدیریت کاربران و نقش‌ها", href: "/users", icon: ShieldCheck, sysManagerOnly: true },
+  { name: "فهرست دارایی‌ها", href: "/assets", icon: Coins },
+  {
+    name: "مدیریت کاربران و نقش‌ها",
+    href: "/users",
+    icon: ShieldCheck,
+    sysManagerOnly: true,
+  },
+  { name: "پروفایل کاربری", href: "/profile", icon: UserCircle },
   { name: "تنظیمات سیستم", href: "/settings", icon: Settings },
 ];
 
@@ -82,7 +87,7 @@ export function Sidebar() {
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group",
                 isActive
                   ? "bg-slate-900 text-white dark:bg-slate-800 dark:text-sky-400 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900/60"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900/60",
               )}
             >
               <Icon
@@ -91,8 +96,8 @@ export function Sidebar() {
                   isActive
                     ? "text-sky-400"
                     : item.sysManagerOnly
-                    ? "text-purple-400 group-hover:text-purple-500"
-                    : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200"
+                      ? "text-purple-400 group-hover:text-purple-500"
+                      : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200",
                 )}
               />
               <span className="flex-1">{item.name}</span>
@@ -119,7 +124,9 @@ export function Sidebar() {
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>پایگاه‌داده متصل است</span>
           </div>
-          <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">v0.1.0</span>
+          <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
+            v0.1.0
+          </span>
         </div>
       </div>
     </aside>
