@@ -1,28 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Clock, Calendar, Check, X, Loader2, Trash2, Target, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useCurrency } from "@/components/currency-provider";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  emergency_fund: "صندوق اضطراری",
-  retirement: "بازنشستگی و استقلال مالی",
-  real_estate: "خرید مسکن و ملک",
-  education: "آموزش و تحصیل",
-  investment: "سرمایه‌گذاری هدفمند",
-  debt_payoff: "تسویه کامل بدهی",
-  vehicle: "خرید خودرو",
-  business: "کسب‌وکار شخصی",
-  personal: "هدف شخصی",
-  other: "سایر اهداف",
-};
+import { GoalCategory } from "@/types/financial";
 
 export default function GoalsPage() {
   const queryClient = useQueryClient();
   const { formatMoney } = useCurrency();
+
+  // Fetch goal categories from backend
+  const { data: goalCategories } = useQuery({
+    queryKey: ["goal-categories"],
+    queryFn: () => api.getGoalCategories(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Derive labels mapping from backend data
+  const CATEGORY_LABELS: Record<string, string> = useMemo(() => {
+    if (!goalCategories) return {};
+    return Object.fromEntries(goalCategories.map((c: GoalCategory) => [c.code, c.label]));
+  }, [goalCategories]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [name, setName] = useState("");
@@ -290,15 +291,11 @@ export default function GoalsPage() {
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
                 >
-                  <option value="emergency_fund">صندوق اضطراری</option>
-                  <option value="retirement">بازنشستگی و استقلال مالی</option>
-                  <option value="real_estate">خرید مسکن و ملک</option>
-                  <option value="vehicle">خرید خودرو</option>
-                  <option value="education">آموزش و توسعه فردی</option>
-                  <option value="business">کسب‌وکار شخصی</option>
-                  <option value="investment">سرمایه‌گذاری هدفمند</option>
-                  <option value="debt_payoff">تسویه بدهی</option>
-                  <option value="other">سایر اهداف</option>
+                  {goalCategories?.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 

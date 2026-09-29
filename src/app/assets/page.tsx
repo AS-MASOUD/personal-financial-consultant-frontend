@@ -28,21 +28,25 @@ import { api } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useCurrency } from "@/components/currency-provider";
 import { useToast } from "@/components/toast-provider";
-import { Asset, MarketQuote } from "@/types/financial";
-
-const CLASS_LABELS: Record<string, string> = {
-  equity: "سهام و ETF",
-  crypto: "ارز دیجیتال",
-  commodity: "طلا و کالاها",
-  fixed_income: "درآمد ثابت و اوراق",
-  real_estate: "املاک و مستغلات",
-  cash: "ارز و نقدینگی",
-};
+import { Asset, AssetClass, MarketQuote } from "@/types/financial";
 
 export default function AssetsPage() {
   const queryClient = useQueryClient();
   const { formatMoney } = useCurrency();
   const { toast } = useToast();
+
+  // Fetch asset class definitions from backend
+  const { data: assetClasses } = useQuery({
+    queryKey: ["asset-classes"],
+    queryFn: () => api.getAssetClasses(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Derive the labels map from backend data
+  const CLASS_LABELS: Record<string, string> = useMemo(() => {
+    if (!assetClasses) return {};
+    return Object.fromEntries(assetClasses.map((c: AssetClass) => [c.code, c.label]));
+  }, [assetClasses]);
 
   const [marketCategory, setMarketCategory] = useState<
     "all" | "gold" | "commodities" | "currencies" | "crypto"
@@ -53,6 +57,9 @@ export default function AssetsPage() {
     "all" | "active" | "inactive"
   >("all");
 
+  // Multi-Selection State for Bulk Deletion
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+
   // Add Asset Modal State
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [symbol, setSymbol] = useState("");
@@ -60,19 +67,8 @@ export default function AssetsPage() {
   const [assetClass, setAssetClass] = useState("commodity");
   const [currency, setCurrency] = useState("TOMAN");
   const [price, setPrice] = useState("");
-  const [isActiveNew, setIsActiveNew] = useState(true);
+  const [isActiveNew, setIsActiveNew] = useState(false);
   const [notes, setNotes] = useState("");
-
-  // Edit Asset Modal State
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
-  const [editSymbol, setEditSymbol] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editAssetClass, setEditAssetClass] = useState("commodity");
-  const [editCurrency, setEditCurrency] = useState("TOMAN");
-  const [editPrice, setEditPrice] = useState("");
-  const [editIsActive, setEditIsActive] = useState(true);
-  const [editNotes, setEditNotes] = useState("");
-  const [editError, setEditError] = useState<string | null>(null);
 
   // Query assets catalog
   const { data: assets, isLoading: isAssetsLoading } = useQuery({
@@ -130,50 +126,18 @@ export default function AssetsPage() {
     },
   });
 
-  // Mutation for editing asset
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      setEditError(null);
-      if (!editingAsset) return;
-      if (!editName.trim()) throw new Error("لطفاً نام دارایی را وارد کنید.");
-      if (!editSymbol.trim())
-        throw new Error("لطفاً نماد دارایی را وارد کنید.");
-
-      return api.updateAsset(editingAsset.id, {
-        symbol: editSymbol.toUpperCase().trim(),
-        name: editName.trim(),
-        asset_class: editAssetClass,
-        currency: editCurrency,
-        current_price: editPrice || "0",
-        is_active: editIsActive,
-        notes: editNotes.trim() || undefined,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["assets"] });
-      setEditingAsset(null);
-      toast.success("دارایی با موفقیت بروزرسانی شد.", "ویرایش دارایی");
-    },
-    onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : "خطا در ویرایش دارایی.";
-      setEditError(msg);
-      toast.error(msg, "خطا در ویرایش");
-    },
-  });
-
-  // Quick Toggle Active / Deactive Mutation
+  // Toggle Active Asset Mutation
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
       api.updateAsset(id, { is_active }),
-    onSuccess: (_, vars) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
-      toast.success(
-        vars.is_active ? "دارایی فعال شد." : "دارایی غیرفعال شد.",
-        "وضعیت دارایی",
-      );
+      queryClient.invalidateQueries({ queryKey: ["positions"] });
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
+      toast.success("وضعیت فعال بودن دارایی بروزرسانی شد.", "تغییر وضعیت");
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : "خطا در تغییر وضعیت.";
+      const msg = err instanceof Error ? err.message : "خطا در تغییر وضعیت دارایی.";
       toast.error(msg, "خطا");
     },
   });
@@ -193,17 +157,23 @@ export default function AssetsPage() {
     },
   });
 
-  const handleOpenEdit = (asset: Asset) => {
-    setEditingAsset(asset);
-    setEditSymbol(asset.symbol);
-    setEditName(asset.name);
-    setEditAssetClass(asset.asset_class);
-    setEditCurrency(asset.currency || "TOMAN");
-    setEditPrice(asset.current_price || "0");
-    setEditIsActive(asset.is_active !== false);
-    setEditNotes(asset.notes || "");
-    setEditError(null);
-  };
+  // Bulk Delete Asset Mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => api.deleteAsset(id)));
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["positions"] });
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
+      setSelectedAssetIds([]);
+      toast.success(`${ids.length} دارایی با موفقیت از کاتالوگ حذف شدند.`, "حذف دسته‌ای");
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "خطا در حذف دسته‌ای دارایی‌ها.";
+      toast.error(msg, "خطا در حذف دسته‌ای");
+    },
+  });
 
   const handlePreFillAsset = (quote: MarketQuote) => {
     setSymbol(quote.symbol);
@@ -229,7 +199,7 @@ export default function AssetsPage() {
 
     setAssetClass(detectedClass);
     setCurrency(detectedCurrency);
-    setIsActiveNew(true);
+    setIsActiveNew(false);
     setIsAddOpen(true);
   };
 
@@ -495,7 +465,7 @@ export default function AssetsPage() {
           )}
         </div>
 
-        {/* Registered Assets Section with Active / Deactive Management */}
+        {/* Registered Assets Section with Active / Deactive Management & Multi-Select */}
         <div className="fin-card p-5 space-y-4 flex flex-col h-full">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-800">
             <div>
@@ -504,44 +474,104 @@ export default function AssetsPage() {
                 <span>دارایی‌های ثبت‌شده در سامانه</span>
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                مدیریت دارایی‌ها، فعال‌سازی/غیرفعال‌سازی برای پورتفوی و ویرایش
+                مدیریت دارایی‌ها، انتخاب چندگانه و فعال‌سازی/غیرفعال‌سازی برای پورتفوی
               </p>
             </div>
 
-            {/* Active / Inactive Filter Tabs */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs font-semibold shrink-0">
-              <button
-                onClick={() => setActiveFilter("all")}
-                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer text-xs ${
-                  activeFilter === "all"
-                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                همه ({assets?.length || 0})
-              </button>
-              <button
-                onClick={() => setActiveFilter("active")}
-                className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer text-xs ${
-                  activeFilter === "active"
-                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <span>فعال ({activeAssetsCount})</span>
-              </button>
-              <button
-                onClick={() => setActiveFilter("inactive")}
-                className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer text-xs ${
-                  activeFilter === "inactive"
-                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                <span>غیرفعال ({inactiveAssetsCount})</span>
-              </button>
+            {/* Active / Inactive Filter Tabs & Bulk Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              {filteredRegisteredAssets.length > 0 && (
+                <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredRegisteredAssets.length > 0 &&
+                      filteredRegisteredAssets.every((a) =>
+                        selectedAssetIds.includes(a.id)
+                      )
+                    }
+                    onChange={() => {
+                      const currentFilteredIds = filteredRegisteredAssets.map(
+                        (a) => a.id
+                      );
+                      const isAllSelected = currentFilteredIds.every((id) =>
+                        selectedAssetIds.includes(id)
+                      );
+                      if (isAllSelected) {
+                        setSelectedAssetIds((prev) =>
+                          prev.filter((id) => !currentFilteredIds.includes(id))
+                        );
+                      } else {
+                        setSelectedAssetIds((prev) =>
+                          Array.from(
+                            new Set([...prev, ...currentFilteredIds])
+                          )
+                        );
+                      }
+                    }}
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer accent-sky-600"
+                  />
+                  <span>انتخاب همه</span>
+                </label>
+              )}
+
+              {selectedAssetIds.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `آیا از حذف ${selectedAssetIds.length} دارایی انتخاب شده مطمئن هستید؟`
+                      )
+                    ) {
+                      bulkDeleteMutation.mutate(selectedAssetIds);
+                    }
+                  }}
+                  disabled={bulkDeleteMutation.isPending}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {bulkDeleteMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  <span>حذف دسته‌ای ({selectedAssetIds.length})</span>
+                </button>
+              )}
+
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs font-semibold shrink-0">
+                <button
+                  onClick={() => setActiveFilter("all")}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer text-xs ${
+                    activeFilter === "all"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  همه ({assets?.length || 0})
+                </button>
+                <button
+                  onClick={() => setActiveFilter("active")}
+                  className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer text-xs ${
+                    activeFilter === "active"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span>فعال ({activeAssetsCount})</span>
+                </button>
+                <button
+                  onClick={() => setActiveFilter("inactive")}
+                  className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer text-xs ${
+                    activeFilter === "inactive"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                  <span>غیرفعال ({inactiveAssetsCount})</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -558,20 +588,40 @@ export default function AssetsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[750px] overflow-y-auto pr-1">
               {filteredRegisteredAssets.map((asset) => {
                 const isActive = asset.is_active !== false;
+                const isSelected = selectedAssetIds.includes(asset.id);
 
                 return (
                   <div
                     key={asset.id}
                     className={`rounded-xl border p-3.5 flex flex-col justify-between transition-all relative ${
-                      isActive
+                      isSelected
+                        ? "border-sky-500 bg-sky-50/40 dark:bg-sky-950/30 ring-1 ring-sky-500/50"
+                        : isActive
                         ? "border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 hover:border-sky-500/50 hover:shadow-md"
                         : "border-dashed border-slate-300 dark:border-slate-800 opacity-75 bg-slate-50/60 dark:bg-slate-900/40"
                     }`}
                   >
                     <div>
-                      {/* Header Badges */}
+                      {/* Header Badges with Checkbox */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAssetIds((prev) => [
+                                  ...prev,
+                                  asset.id,
+                                ]);
+                              } else {
+                                setSelectedAssetIds((prev) =>
+                                  prev.filter((id) => id !== asset.id)
+                                );
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer accent-sky-600 shrink-0"
+                          />
                           <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
                             {asset.symbol}
                           </span>
@@ -587,9 +637,7 @@ export default function AssetsPage() {
                                 isActive ? "bg-emerald-500" : "bg-slate-400"
                               }`}
                             />
-                            <span>
-                              {isActive ? "فعال" : "غیرفعال"}
-                            </span>
+                            <span>{isActive ? "فعال" : "غیرفعال"}</span>
                           </span>
                         </div>
 
@@ -622,7 +670,7 @@ export default function AssetsPage() {
                         </span>
                       </div>
 
-                      {/* Actions: Edit & Active/Deactive Toggle & Delete */}
+                      {/* Actions: Active/Deactive Toggle & Delete */}
                       <div className="flex items-center gap-1">
                         {/* Active / Deactive Toggle Button */}
                         <button
@@ -651,21 +699,12 @@ export default function AssetsPage() {
                           )}
                         </button>
 
-                        {/* Edit Asset Button */}
-                        <button
-                          onClick={() => handleOpenEdit(asset)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors cursor-pointer"
-                          title="ویرایش مشخصات دارایی"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-
                         {/* Delete Asset Button */}
                         <button
                           onClick={() => {
                             if (
                               confirm(
-                                `آیا از حذف نماد «${asset.symbol} - ${asset.name}» مطمئن هستید؟`,
+                                `آیا از حذف نماد «${asset.symbol} - ${asset.name}» مطمئن هستید؟`
                               )
                             ) {
                               deleteMutation.mutate(asset.id);
@@ -710,194 +749,6 @@ export default function AssetsPage() {
           )}
         </div>
       </div>
-
-      {/* Edit Asset Modal */}
-      {editingAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="fin-card w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <Edit2 className="h-4 w-4 text-sky-500" />
-                  <span>ویرایش دارایی ({editingAsset.symbol})</span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  بروزرسانی مشخصات، نرخ پایه یا وضعیت فعال/غیرفعال بودن
-                </p>
-              </div>
-              <button
-                onClick={() => setEditingAsset(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {editError && (
-              <div className="mt-3 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-1.5">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{editError}</span>
-              </div>
-            )}
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                updateMutation.mutate();
-              }}
-              className="mt-4 space-y-3.5 text-xs"
-            >
-              {/* Symbol */}
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  نماد / تیکر دارایی
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editSymbol}
-                  onChange={(e) => setEditSymbol(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 uppercase focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold font-mono"
-                />
-              </div>
-
-              {/* Name */}
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  نام کامل دارایی
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
-                />
-              </div>
-
-              {/* Class & Currency */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    دسته‌بندی دارایی
-                  </label>
-                  <select
-                    value={editAssetClass}
-                    onChange={(e) => setEditAssetClass(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  >
-                    <option value="commodity">طلا و کالاها</option>
-                    <option value="crypto">ارز دیجیتال</option>
-                    <option value="cash">ارز فیات و نقدینگی</option>
-                    <option value="equity">سهام و صندوق ETF</option>
-                    <option value="fixed_income">اوراق و درآمد ثابت</option>
-                    <option value="real_estate">املاک و مستغلات</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    ارز پایه قیمت
-                  </label>
-                  <select
-                    value={editCurrency}
-                    onChange={(e) => setEditCurrency(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
-                  >
-                    <option value="TOMAN">تومان (TOMAN)</option>
-                    <option value="USD">دلار (USD)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Price */}
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  نرخ فعلی ({editCurrency})
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  required
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold font-mono text-sm"
-                />
-              </div>
-
-              {/* Active / Inactive Status Switch */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-slate-200 block">
-                    وضعیت دارایی
-                  </span>
-                  <span className="text-[11px] text-slate-400">
-                    {editIsActive
-                      ? "فعال: در پایش بازار و محاسبات ارزش دارایی‌ها استفاده می‌شود."
-                      : "غیرفعال: بایگانی‌شده و در پایش یا محاسبات جدید در نظر گرفته نمی‌شود."}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditIsActive(!editIsActive)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    editIsActive
-                      ? "bg-emerald-500 text-white shadow-xs"
-                      : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                  }`}
-                >
-                  {editIsActive ? (
-                    <>
-                      <Check className="h-3.5 w-3.5" />
-                      <span>فعال</span>
-                    </>
-                  ) : (
-                    <>
-                      <X className="h-3.5 w-3.5" />
-                      <span>غیرفعال</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  یادداشت و استراتژی (اختیاری)
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="توضیحات یا استراتژی سرمایه‌گذاری..."
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingAsset(null)}
-                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                >
-                  انصراف
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  {updateMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4" />
-                  )}
-                  <span>ذخیره تغییرات</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Add Asset Modal */}
       {isAddOpen && (
@@ -960,12 +811,9 @@ export default function AssetsPage() {
                     onChange={(e) => setAssetClass(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
-                    <option value="commodity">طلا و کالاها</option>
-                    <option value="crypto">ارز دیجیتال</option>
-                    <option value="cash">ارز فیات و نقدینگی</option>
-                    <option value="equity">سهام و صندوق ETF</option>
-                    <option value="fixed_income">اوراق و درآمد ثابت</option>
-                    <option value="real_estate">املاک و مستغلات</option>
+                    {assetClasses?.map((c) => (
+                      <option key={c.code} value={c.code}>{c.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>

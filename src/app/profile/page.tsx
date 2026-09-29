@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
 import { api } from "@/lib/api";
@@ -25,14 +26,28 @@ import {
   Award,
   TrendingUp,
   Coins,
+  AlertTriangle,
+  Sliders,
 } from "lucide-react";
 import { SystemRole } from "@/types/auth";
 import { FinancialOnboardingModal } from "@/components/onboarding/financial-onboarding-modal";
 import { RiskAssessmentModal } from "@/components/onboarding/risk-assessment-modal";
-import { normalizeDigitsToEnglish, isValidIranPhone, isValidFullName } from "@/lib/utils";
+import { CustomAllocationModal } from "@/components/financial/custom-allocation-modal";
+import { calculatePortfolioAllocationCompliance } from "@/lib/allocation-utils";
+import {
+  normalizeDigitsToEnglish,
+  isValidIranPhone,
+  isValidFullName,
+} from "@/lib/utils";
 
 export default function ProfilePage() {
-  const { user, updateProfile, refreshProfile, isAuthenticated, isLoading: authLoading } = useAuth();
+  const {
+    user,
+    updateProfile,
+    refreshProfile,
+    isAuthenticated,
+    isLoading: authLoading,
+  } = useAuth();
   const { toast } = useToast();
 
   // Profile Edit State
@@ -52,6 +67,17 @@ export default function ProfilePage() {
   // Modals State
   const [showFinancialModal, setShowFinancialModal] = useState(false);
   const [showRiskModal, setShowRiskModal] = useState(false);
+  const [showCustomAllocModal, setShowCustomAllocModal] = useState(false);
+
+  // Fetch positions for portfolio allocation compliance check
+  const { data: positions } = useQuery({
+    queryKey: ["asset-positions"],
+    queryFn: () => api.getPositions(),
+  });
+
+  const compliance = useMemo(() => {
+    return calculatePortfolioAllocationCompliance(positions, user?.portfolio_suggestion);
+  }, [positions, user?.portfolio_suggestion]);
 
   // Password Change State
   const [oldPassword, setOldPassword] = useState("");
@@ -65,7 +91,9 @@ export default function ProfilePage() {
       setFullName(user.full_name || "");
       setPhoneNumber(user.phone_number || "");
       setEmail(user.email || "");
-      setAge(user.age !== undefined && user.age !== null ? String(user.age) : "");
+      setAge(
+        user.age !== undefined && user.age !== null ? String(user.age) : "",
+      );
       setJob(user.job || "");
       setBio(user.bio || "");
     }
@@ -76,7 +104,9 @@ export default function ProfilePage() {
       setFullName(user.full_name || "");
       setPhoneNumber(user.phone_number || "");
       setEmail(user.email || "");
-      setAge(user.age !== undefined && user.age !== null ? String(user.age) : "");
+      setAge(
+        user.age !== undefined && user.age !== null ? String(user.age) : "",
+      );
       setJob(user.job || "");
       setBio(user.bio || "");
       toast.info("تغییرات به مقادیر قبلی بازنشانی شدند.", "بازنشانی اطلاعات");
@@ -93,7 +123,10 @@ export default function ProfilePage() {
     }
 
     if (!isValidFullName(cleanName)) {
-      toast.error("نام و نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر باشد.", "خطای اعتبارسنجی نام");
+      toast.error(
+        "نام و نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر باشد.",
+        "خطای اعتبارسنجی نام",
+      );
       return;
     }
 
@@ -101,7 +134,7 @@ export default function ProfilePage() {
     if (cleanPhone && !isValidIranPhone(cleanPhone)) {
       toast.error(
         "شماره موبایل نامعتبر است. شماره باید با 09 شروع شده و دقیقاً ۱۱ رقم باشد (مثال: 09123456789).",
-        "خطای اعتبارسنجی شماره موبایل"
+        "خطای اعتبارسنجی شماره موبایل",
       );
       return;
     }
@@ -109,9 +142,17 @@ export default function ProfilePage() {
     setIsSavingProfile(true);
 
     try {
-      const parsedAge = age.trim() ? parseInt(normalizeDigitsToEnglish(age).trim(), 10) : null;
-      if (parsedAge !== null && (isNaN(parsedAge) || parsedAge < 10 || parsedAge > 120)) {
-        toast.error("سن وارد شده باید عددی معتبر بین ۱۰ تا ۱۲۰ سال باشد.", "خطای اعتبارسنجی سن");
+      const parsedAge = age.trim()
+        ? parseInt(normalizeDigitsToEnglish(age).trim(), 10)
+        : null;
+      if (
+        parsedAge !== null &&
+        (isNaN(parsedAge) || parsedAge < 10 || parsedAge > 120)
+      ) {
+        toast.error(
+          "سن وارد شده باید عددی معتبر بین ۱۰ تا ۱۲۰ سال باشد.",
+          "خطای اعتبارسنجی سن",
+        );
         setIsSavingProfile(false);
         return;
       }
@@ -125,10 +166,14 @@ export default function ProfilePage() {
         bio: bio.trim() || null,
       });
 
-      toast.success("اطلاعات پروفایل شما با موفقیت به‌روزرسانی شد.", "به‌روزرسانی موفق");
+      toast.success(
+        "اطلاعات پروفایل شما با موفقیت به‌روزرسانی شد.",
+        "به‌روزرسانی موفق",
+      );
       await refreshProfile();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "خطا در ذخیره تغییرات پروفایل.";
+      const msg =
+        err instanceof Error ? err.message : "خطا در ذخیره تغییرات پروفایل.";
       toast.error(msg, "خطای ذخیره‌سازی");
     } finally {
       setIsSavingProfile(false);
@@ -144,12 +189,18 @@ export default function ProfilePage() {
     }
 
     if (!newPassword || newPassword.length < 6) {
-      toast.error("طول رمز عبور جدید باید حداقل ۶ کاراکتر باشد.", "رمز عبور کوتاه");
+      toast.error(
+        "طول رمز عبور جدید باید حداقل ۶ کاراکتر باشد.",
+        "رمز عبور کوتاه",
+      );
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("تکرار رمز عبور جدید با رمز عبور وارد شده همخوانی ندارد.", "عدم تطابق رمز عبور");
+      toast.error(
+        "تکرار رمز عبور جدید با رمز عبور وارد شده همخوانی ندارد.",
+        "عدم تطابق رمز عبور",
+      );
       return;
     }
 
@@ -160,12 +211,16 @@ export default function ProfilePage() {
         old_password: oldPassword,
         new_password: newPassword,
       });
-      toast.success("کلمه عبور شما با موفقیت تغییر یافت.", "تغییر موفق رمز عبور");
+      toast.success(
+        "کلمه عبور شما با موفقیت تغییر یافت.",
+        "تغییر موفق رمز عبور",
+      );
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "خطا در تغییر کلمه عبور.";
+      const msg =
+        err instanceof Error ? err.message : "خطا در تغییر کلمه عبور.";
       toast.error(msg, "خطای تغییر رمز");
     } finally {
       setIsChangingPassword(false);
@@ -207,9 +262,15 @@ export default function ProfilePage() {
 
   const getRiskLevelTitle = (level?: string | null) => {
     if (!level) return "تعیین نشده";
-    if (level === "conservative" || level.includes("محافظه")) return "محافظه‌کارانه";
+    if (level === "conservative" || level.includes("محافظه"))
+      return "محافظه‌کارانه";
     if (level === "moderate" || level.includes("متعادل")) return "متعادل";
-    if (level === "aggressive" || level.includes("جسور") || level.includes("ریسک")) return "جسورانه / ریسک‌پذیر";
+    if (
+      level === "aggressive" ||
+      level.includes("جسور") ||
+      level.includes("ریسک")
+    )
+      return "جسورانه / ریسک‌پذیر";
     return level;
   };
 
@@ -266,7 +327,8 @@ export default function ProfilePage() {
           <span>پروفایل و اطلاعات کاربری</span>
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          مشاهده، تکمیل و ویرایش مشخصات شخصی، سن، شغل، اطلاعات تماس و تنظیمات امنیتی
+          مشاهده، تکمیل و ویرایش مشخصات شخصی، سن، شغل، اطلاعات تماس و تنظیمات
+          امنیتی
         </p>
       </div>
 
@@ -370,37 +432,64 @@ export default function ProfilePage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                    <span className="text-[11px] text-slate-500">عنوان شغل:</span>
+                    <span className="text-[11px] text-slate-500">
+                      عنوان شغل:
+                    </span>
                     <p className="font-bold text-slate-900 dark:text-slate-100 mt-0.5">
                       {user.job || "ثبت نشده"}
                     </p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                    <span className="text-[11px] text-slate-500">درآمد ماهانه:</span>
-                    <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono" dir="ltr">
+                    <span className="text-[11px] text-slate-500">
+                      درآمد ماهانه:
+                    </span>
+                    <p
+                      className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 font-mono"
+                      dir="ltr"
+                    >
                       {Number(user.monthly_income || 0).toLocaleString("en-US")}{" "}
-                      <span className="text-[10px] font-sans text-slate-400 font-normal">تومان</span>
+                      <span className="text-[10px] font-sans text-slate-400 font-normal">
+                        تومان
+                      </span>
                     </p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                    <span className="text-[11px] text-slate-500">نقدینگی و پس‌انداز:</span>
-                    <p className="font-bold text-slate-900 dark:text-slate-100 mt-0.5 font-mono" dir="ltr">
+                    <span className="text-[11px] text-slate-500">
+                      نقدینگی و پس‌انداز:
+                    </span>
+                    <p
+                      className="font-bold text-slate-900 dark:text-slate-100 mt-0.5 font-mono"
+                      dir="ltr"
+                    >
                       {Number(user.liquid_assets || 0).toLocaleString("en-US")}{" "}
-                      <span className="text-[10px] font-sans text-slate-400 font-normal">تومان</span>
+                      <span className="text-[10px] font-sans text-slate-400 font-normal">
+                        تومان
+                      </span>
                     </p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                    <span className="text-[11px] text-slate-500">سرمایه‌گذاری‌ها:</span>
-                    <p className="font-bold text-sky-600 dark:text-sky-400 mt-0.5 font-mono" dir="ltr">
-                      {Number(user.investment_assets || 0).toLocaleString("en-US")}{" "}
-                      <span className="text-[10px] font-sans text-slate-400 font-normal">تومان</span>
+                    <span className="text-[11px] text-slate-500">
+                      سرمایه‌گذاری‌ها:
+                    </span>
+                    <p
+                      className="font-bold text-sky-600 dark:text-sky-400 mt-0.5 font-mono"
+                      dir="ltr"
+                    >
+                      {Number(user.investment_assets || 0).toLocaleString(
+                        "en-US",
+                      )}{" "}
+                      <span className="text-[10px] font-sans text-slate-400 font-normal">
+                        تومان
+                      </span>
                     </p>
                   </div>
                 </div>
 
                 {user.financial_goals && user.financial_goals.length > 0 && (
                   <div className="space-y-1.5 pt-1">
-                    <span className="text-[11px] font-semibold text-slate-500">اهداف مالی برگزیده:</span>
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      اهداف مالی برگزیده:
+                    </span>
                     <div className="flex flex-wrap gap-1.5">
                       {user.financial_goals.map((g, idx) => (
                         <span
@@ -417,7 +506,9 @@ export default function ProfilePage() {
             ) : (
               <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
                 <p>
-                  اطلاعات مالی و شغلی شما هنوز ثبت نشده است. با ثبت این اطلاعات، میانگین حقوق بازار برای حوزه کاری شما محاسبه شده و نمودارهای داشبورد فعال می‌شوند.
+                  اطلاعات مالی و شغلی شما هنوز ثبت نشده است. با ثبت این اطلاعات،
+                  میانگین حقوق بازار برای حوزه کاری شما محاسبه شده و نمودارهای
+                  داشبورد فعال می‌شوند.
                 </p>
               </div>
             )}
@@ -466,84 +557,136 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {user.has_completed_risk_onboarding ? (
+            {user.has_completed_risk_onboarding || user.portfolio_suggestion ? (
               <div className="space-y-3.5">
                 <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
                   <div>
-                    <span className="text-[11px] text-slate-500">سطح ریسک‌پذیری:</span>
+                    <span className="text-[11px] text-slate-500">
+                      سطح ریسک‌پذیری:
+                    </span>
                     <p className="text-xs font-bold text-purple-600 dark:text-purple-400 mt-0.5">
                       {getRiskLevelTitle(user.risk_level)}
                     </p>
                   </div>
                   <div className="text-left font-mono">
                     <span className="text-[11px] text-slate-500">امتیاز:</span>
-                    <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mt-0.5" dir="ltr">
-                      {user.risk_score} / 100
+                    <p
+                      className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mt-0.5"
+                      dir="ltr"
+                    >
+                      {user.risk_score || 0} / 100
                     </p>
                   </div>
                 </div>
 
-                {user.portfolio_suggestion && (
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-semibold text-slate-500">
-                      ترکیب سبد پیشنهادی:
+                {/* Target vs Actual Allocation Breakdown */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      سقف تخصیص هدف پورتفوی vs موجودی فعلی:
                     </span>
-                    <div className="grid grid-cols-5 gap-1 text-center">
-                      <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                        <div className="text-[9px]">سهام</div>
-                        <div className="text-xs font-bold font-mono">
-                          {user.portfolio_suggestion.equities || 0}%
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomAllocModal(true)}
+                      className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sliders className="h-3 w-3" />
+                      <span>ویرایش درصدهای هدف</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-1.5 text-center">
+                    {compliance.items.map((item) => {
+                      const isExceeded = item.isExceeded;
+                      return (
+                        <div
+                          key={item.key}
+                          className={`p-2 rounded-xl transition-all ${
+                            isExceeded
+                              ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                              : item.key === "equities"
+                              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                              : item.key === "gold"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                              : item.key === "fixed_income"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : item.key === "crypto"
+                              ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20"
+                              : "bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20"
+                          }`}
+                        >
+                          <div className="text-[9px] font-bold truncate">
+                            {item.label.split(" ")[0]}
+                          </div>
+                          <div className="text-xs font-black font-mono mt-0.5">
+                            {item.targetPercent}٪
+                          </div>
+                          <div className="text-[9px] font-mono text-slate-500 dark:text-slate-400 border-t border-slate-200/50 dark:border-slate-800 pt-0.5 mt-0.5">
+                            فعلی: {item.actualPercent.toFixed(0)}٪
+                          </div>
+                          {isExceeded && (
+                            <div className="text-[8px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center justify-center gap-0.5">
+                              <AlertTriangle className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                              <span>تخطی</span>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                        <div className="text-[9px]">طلا</div>
-                        <div className="text-xs font-bold font-mono">
-                          {user.portfolio_suggestion.gold ?? user.portfolio_suggestion.gold_commodity ?? 0}%
-                        </div>
-                      </div>
-                      <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        <div className="text-[9px]">درآمد ثابت</div>
-                        <div className="text-xs font-bold font-mono">
-                          {user.portfolio_suggestion.fixed_income || 0}%
-                        </div>
-                      </div>
-                      <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                        <div className="text-[9px]">رمزارز</div>
-                        <div className="text-xs font-bold font-mono">
-                          {user.portfolio_suggestion.crypto || 0}%
-                        </div>
-                      </div>
-                      <div className="p-1.5 rounded-lg bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
-                        <div className="text-[9px]">نقدینگی</div>
-                        <div className="text-xs font-bold font-mono">
-                          {user.portfolio_suggestion.cash || 0}%
-                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Warning banner inside Card 2 if any category is exceeded */}
+                  {compliance.hasExceededCategory && (
+                    <div className="p-3 rounded-xl bg-amber-500/5 dark:bg-amber-950/10 border border-amber-500/20 text-slate-700 dark:text-slate-300 text-xs flex items-start gap-2 mt-2 leading-relaxed">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                      <div>
+                        <span className="font-bold block text-slate-800 dark:text-slate-200">هشدار عدم انطباق پورتفوی با سقف ریسک:</span>
+                        <span className="text-[11px] text-amber-700 dark:text-amber-400 block mt-0.5">
+                          {compliance.exceededItems.map((item) => (
+                            <span key={item.key} className="block font-mono">
+                              • دسته «{item.label}»: سهم فعلی ({item.actualPercent.toFixed(1)}٪) از سقف هدف ({item.targetPercent}٪) به میزان +{item.excessPercent.toFixed(1)}٪ فراتر رفته است.
+                            </span>
+                          ))}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ) : (
               <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/20 text-xs text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
                 <p>
-                  شما هنوز در آزمون ۵ پرسشی روانشناسی ریسک شرکت نکرده‌اید. با پاسخ به این پرسش‌ها، شخصیت سرمایه‌گذاری شما مشخص و درصد تخصیص بهینه سهام، طلا و رمزارز پیشنهاد داده می‌شود.
+                  شما هنوز در آزمون ۵ پرسشی روانشناسی ریسک شرکت نکرده‌اید. با
+                  پاسخ به این پرسش‌ها، شخصیت سرمایه‌گذاری شما مشخص و درصد تخصیص
+                  بهینه سهام، طلا و رمزارز پیشنهاد داده می‌شود.
                 </p>
               </div>
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowRiskModal(true)}
-            className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-md shadow-purple-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-          >
-            <Scale className="h-4 w-4" />
-            <span>
-              {user.has_completed_risk_onboarding
-                ? "شرکت مجدد در آزمون سنجش ریسک"
-                : "شروع آزمون روانشناسی ریسک‌پذیری"}
-            </span>
-          </button>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => setShowRiskModal(true)}
+              className="py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-md shadow-purple-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Scale className="h-4 w-4" />
+              <span>
+                {user.has_completed_risk_onboarding
+                  ? "شرکت مجدد در آزمون"
+                  : "آزمون روانشناسی ریسک"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowCustomAllocModal(true)}
+              className="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Sliders className="h-4 w-4 text-purple-500" />
+              <span>تنظیم درصدهای تخصیص</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -558,7 +701,8 @@ export default function ProfilePage() {
                 <span>ویرایش مشخصات هویتی و شغلی</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                فیلدهای سن، ایمیل و شغل برای شخصی‌سازی محاسبات بازنشستگی و گزارش‌ها استفاده می‌شوند.
+                فیلدهای سن، ایمیل و شغل برای شخصی‌سازی محاسبات بازنشستگی و
+                گزارش‌ها استفاده می‌شوند.
               </p>
             </div>
 
@@ -592,7 +736,9 @@ export default function ProfilePage() {
                       maxLength={11}
                       value={phoneNumber}
                       onChange={(e) => {
-                        const val = normalizeDigitsToEnglish(e.target.value).replace(/\D/g, "");
+                        const val = normalizeDigitsToEnglish(
+                          e.target.value,
+                        ).replace(/\D/g, "");
                         if (val.length <= 11) setPhoneNumber(val);
                       }}
                       placeholder="09123456789"
@@ -606,7 +752,9 @@ export default function ProfilePage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                     <span>پست الکترونیکی (ایمیل)</span>
-                    <span className="text-[10px] text-slate-400 font-normal">اختیاری</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      اختیاری
+                    </span>
                   </label>
                   <div className="relative">
                     <Mail className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -625,7 +773,9 @@ export default function ProfilePage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                     <span>سن</span>
-                    <span className="text-[10px] text-slate-400 font-normal">اختیاری (۱۰ تا ۱۲۰)</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      اختیاری (۱۰ تا ۱۲۰)
+                    </span>
                   </label>
                   <div className="relative">
                     <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -647,7 +797,9 @@ export default function ProfilePage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span>شغل و حوزه فعالیت حرفه‌ای</span>
-                  <span className="text-[10px] text-slate-400 font-normal">اختیاری</span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    اختیاری
+                  </span>
                 </label>
                 <div className="relative">
                   <Briefcase className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -665,7 +817,9 @@ export default function ProfilePage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span>درباره من / استراتژی و اهداف سرمایه‌گذاری</span>
-                  <span className="text-[10px] text-slate-400 font-normal">اختیاری</span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    اختیاری
+                  </span>
                 </label>
                 <textarea
                   rows={3}
@@ -829,14 +983,21 @@ export default function ProfilePage() {
         onSuccess={async () => {
           setShowFinancialModal(false);
           await refreshProfile();
-          toast.success("اطلاعات مالی و شغلی با موفقیت به‌روزرسانی شد.", "به‌روزرسانی موفق");
+          toast.success(
+            "اطلاعات مالی و شغلی با موفقیت به‌روزرسانی شد.",
+            "به‌روزرسانی موفق",
+          );
         }}
         initialData={{
           job: user.job || "",
           monthly_income: user.monthly_income ? Number(user.monthly_income) : 0,
           liquid_assets: user.liquid_assets ? Number(user.liquid_assets) : 0,
-          investment_assets: user.investment_assets ? Number(user.investment_assets) : 0,
-          total_liabilities: user.total_liabilities ? Number(user.total_liabilities) : 0,
+          investment_assets: user.investment_assets
+            ? Number(user.investment_assets)
+            : 0,
+          total_liabilities: user.total_liabilities
+            ? Number(user.total_liabilities)
+            : 0,
           financial_goals: user.financial_goals || [],
         }}
       />
@@ -849,6 +1010,14 @@ export default function ProfilePage() {
           await refreshProfile();
         }}
         initialAnswers={user.risk_answers || undefined}
+      />
+
+      <CustomAllocationModal
+        isOpen={showCustomAllocModal}
+        onClose={() => setShowCustomAllocModal(false)}
+        onSuccess={async () => {
+          await refreshProfile();
+        }}
       />
     </div>
   );

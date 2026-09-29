@@ -6,6 +6,7 @@ import { X, Check, Loader2, Plus, Edit2, Trash2, CheckCircle2, Calendar } from "
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useUserPlatforms } from "@/hooks/use-user-platforms";
+import { useCurrency } from "@/components/currency-provider";
 
 interface QuickTransactionModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface QuickTransactionModalProps {
 export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModalProps) {
   const queryClient = useQueryClient();
   const { platforms, addPlatform, editPlatform, deletePlatform } = useUserPlatforms();
+  const { exchangeRate, formatMoney } = useCurrency();
 
   const [txType, setTxType] = useState<string>("DEPOSIT");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
@@ -35,18 +37,21 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
   const { data: assets } = useQuery({
     queryKey: ["assets"],
     queryFn: () => api.getAssets(),
-    enabled: isOpen && (txType === "BUY" || txType === "SELL" || txType === "DIVIDEND"),
+    enabled: isOpen,
   });
 
+  const activeAssets = React.useMemo(() => assets?.filter((a) => a.is_active !== false) || [], [assets]);
   const effectivePlatform = selectedPlatform || (platforms.length > 0 ? platforms[0] : "");
-  const selectedAssetId = assetId || (assets && assets.length > 0 ? assets[0].id : "");
+  const selectedAssetId = assetId || (activeAssets.length > 0 ? activeAssets[0].id : "");
+  const selectedAsset = activeAssets.find((a) => a.id === selectedAssetId);
+  const selectedAssetCurrency = (txType === "BUY" || txType === "SELL") && selectedAsset ? (selectedAsset.currency || "TOMAN") : "TOMAN";
 
   const handleQuantityChange = (val: string) => {
     setQuantity(val);
     const q = parseFloat(val);
     const p = parseFloat(unitPrice);
     if (!isNaN(q) && !isNaN(p) && (txType === "BUY" || txType === "SELL")) {
-      setAmount((q * p).toFixed(0));
+      setAmount((q * p).toFixed(4));
     }
   };
 
@@ -55,19 +60,19 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
     const q = parseFloat(quantity);
     const p = parseFloat(val);
     if (!isNaN(q) && !isNaN(p) && (txType === "BUY" || txType === "SELL")) {
-      setAmount((q * p).toFixed(0));
+      setAmount((q * p).toFixed(4));
     }
   };
 
   const handleAssetChange = (val: string) => {
     setAssetId(val);
-    const selected = assets?.find((a) => a.id === val);
+    const selected = activeAssets?.find((a) => a.id === val);
     if (selected) {
       setUnitPrice(selected.current_price);
       const q = parseFloat(quantity);
       const p = parseFloat(selected.current_price);
       if (!isNaN(q) && !isNaN(p) && (txType === "BUY" || txType === "SELL")) {
-        setAmount((q * p).toFixed(0));
+        setAmount((q * p).toFixed(4));
       }
     }
   };
@@ -99,7 +104,7 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
         throw new Error("لطفاً پلتفرم یا محل نگهداری دارایی را مشخص کنید.");
       }
       if (!amount || parseFloat(amount) <= 0) {
-        throw new Error("لطفاً مبلغ معتبر را به تومان وارد کنید.");
+        throw new Error("لطفاً مبلغ معتبر را وارد کنید.");
       }
 
       let finalDate = new Date();
@@ -116,7 +121,7 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
         transaction_date: finalDate.toISOString(),
         total_amount: amount,
         fee: "0",
-        currency: "TOMAN",
+        currency: selectedAssetCurrency,
         notes: notes || undefined,
       };
 
@@ -327,17 +332,30 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
                 <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
                   دارایی (طلا، ارز، رمزارز، سهام)
                 </label>
-                <select
-                  value={selectedAssetId}
-                  onChange={(e) => handleAssetChange(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                >
-                  {assets?.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.name} ({asset.symbol}) - قیمت: {parseFloat(asset.current_price).toLocaleString()} تومان
-                    </option>
-                  ))}
-                </select>
+                {activeAssets.length === 0 ? (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg text-amber-800 dark:text-amber-200 text-xs">
+                    هیچ دارایی فعالی در سامانه ثبت نشده است. لطفاً ابتدا به کاتالوگ دارایی‌ها رفته و دارایی مورد نظر خود را فعال کنید.
+                  </div>
+                ) : (
+                  <select
+                    value={selectedAssetId}
+                    onChange={(e) => handleAssetChange(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  >
+                    {activeAssets.map((asset) => {
+                      const isUSD = asset.currency === "USD";
+                      const pNum = parseFloat(asset.current_price);
+                      const tomanEquiv = isUSD ? pNum * exchangeRate : pNum;
+
+                      return (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.name} ({asset.symbol}) — {isUSD ? `$${pNum.toLocaleString("en-US")} USD` : `${pNum.toLocaleString("fa-IR")} تومان`}
+                          {isUSD ? ` (≈ ${tomanEquiv.toLocaleString("fa-IR")} تومان)` : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
@@ -356,16 +374,30 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
                 </div>
                 <div>
                   <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    قیمت واحد (تومان)
+                    قیمت واحد ({selectedAssetCurrency === "USD" ? "دلار USD" : "تومان"})
                   </label>
                   <input
                     type="number"
                     step="any"
-                    placeholder="مثلاً 50,000,000"
+                    placeholder={selectedAssetCurrency === "USD" ? "مثلاً 30.50" : "مثلاً 50,000,000"}
                     value={unitPrice}
                     onChange={(e) => handleUnitPriceChange(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
                   />
+                  {unitPrice && !isNaN(parseFloat(unitPrice)) && parseFloat(unitPrice) > 0 && (
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between font-mono">
+                      <span>
+                        {selectedAssetCurrency === "USD"
+                          ? `≈ ${(parseFloat(unitPrice) * exchangeRate).toLocaleString("fa-IR")} تومان`
+                          : `≈ $${exchangeRate > 0 ? (parseFloat(unitPrice) / exchangeRate).toFixed(2) : "0"} USD`}
+                      </span>
+                      {selectedAssetCurrency === "USD" && (
+                        <span className="text-[10px] text-sky-600 dark:text-sky-400">
+                          (نرخ دلار: {exchangeRate.toLocaleString("fa-IR")} تومان)
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </>
@@ -445,10 +477,10 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
             )}
           </div>
 
-          {/* Total Amount (Fee removed entirely as requested) */}
+          {/* Total Amount */}
           <div>
             <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-              مبلغ کل تراکنش (تومان)
+              مبلغ کل تراکنش ({selectedAssetCurrency === "USD" ? "دلار USD" : "تومان"})
             </label>
             <input
               type="number"
@@ -458,10 +490,22 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
               onChange={(e) => setAmount(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold font-mono text-sm"
             />
-            {amount && !isNaN(parseFloat(amount)) && (
-              <span className="text-[11px] text-slate-400 mt-1 block font-mono">
-                معادل: {parseFloat(amount).toLocaleString()} تومان
-              </span>
+            {amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0 && (
+              <div className="space-y-1.5 mt-1.5 font-mono">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                  {selectedAssetCurrency === "USD"
+                    ? `مبلغ کل: $${parseFloat(amount).toLocaleString("en-US")} USD`
+                    : `مبلغ کل: ${parseFloat(amount).toLocaleString("fa-IR")} تومان`}
+                </span>
+                {selectedAssetCurrency === "USD" && (
+                  <div className="p-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-900 flex items-center justify-between text-xs">
+                    <span className="text-slate-600 dark:text-slate-300 font-medium">معادل مبلغ کل به تومان:</span>
+                    <span className="font-extrabold text-sky-700 dark:text-sky-300 font-mono" dir="ltr">
+                      {(parseFloat(amount) * exchangeRate).toLocaleString("fa-IR")} تومان
+                    </span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

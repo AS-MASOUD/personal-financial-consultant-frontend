@@ -54,6 +54,7 @@ export interface FinancialOnboardingResponse {
 
 export interface RiskAssessmentInput {
   answers: Record<string, number>;
+  custom_portfolio_allocation?: Record<string, number>;
 }
 
 export interface RiskAssessmentResult {
@@ -77,6 +78,7 @@ export interface ProfileUpdateInput {
   age?: number | null;
   job?: string | null;
   bio?: string | null;
+  portfolio_suggestion?: Record<string, number>;
 }
 
 export interface AuthResponse {

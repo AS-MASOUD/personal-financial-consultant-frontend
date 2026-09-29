@@ -4,11 +4,13 @@ import {
   AIMessage,
   AmortizationScheduleItem,
   Asset,
+  AssetClass,
   AssetPosition,
   CashflowCategory,
   CashflowEntry,
   CashflowSummary,
   FinancialGoal,
+  GoalCategory,
   HistoricalSnapshot,
   Liability,
   LiabilityPayment,
@@ -275,6 +277,7 @@ export const api = {
   deleteAccount: (id: string) => request<void>(`/accounts/${id}`, { method: "DELETE" }),
 
   // Assets & Positions
+  getAssetClasses: () => request<AssetClass[]>("/assets/classes"),
   getAssets: (filter?: string | { asset_class?: string; is_active?: boolean }) => {
     const query = new URLSearchParams();
     if (typeof filter === "string") {
@@ -340,6 +343,7 @@ export const api = {
     request<CashflowEntry>("/cashflow/entries", { method: "POST", body: JSON.stringify(data) }),
 
   // Goals
+  getGoalCategories: () => request<GoalCategory[]>("/goals/categories"),
   getGoals: () => request<FinancialGoal[]>("/goals"),
   createGoal: (data: Record<string, unknown>) =>
     request<FinancialGoal>("/goals", { method: "POST", body: JSON.stringify(data) }),

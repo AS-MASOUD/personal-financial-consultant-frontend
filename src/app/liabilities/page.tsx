@@ -38,128 +38,16 @@ const ICON_MAP: Record<string, React.ElementType> = {
   GraduationCap,
 };
 
-const DEFAULT_LIABILITY_TYPES = [
-  {
-    id: "bank_loan",
-    label: "وام بانکی",
-    description: "تسهیلات بانکی با نرخ سود مصوب یا توافقی",
-    icon: Building,
-    defaultRate: "18.0",
-    defaultTerm: "24",
-    isFriend: false,
-    direction: "debt",
-  },
-  {
-    id: "friend_borrowed",
-    label: "قرض گرفتن از دوست / آشنا",
-    description: "بدهی من به دیگری (سود ۰٪ قرض‌الحسنه)",
-    icon: ArrowDownLeft,
-    defaultRate: "0.0",
-    defaultTerm: "3",
-    isFriend: true,
-    direction: "debt",
-  },
-  {
-    id: "friend_lent",
-    label: "قرض دادن به دوست / آشنا",
-    description: "طلب من از دیگری / مطالبات مالی (سود ۰٪)",
-    icon: ArrowUpRight,
-    defaultRate: "0.0",
-    defaultTerm: "3",
-    isFriend: true,
-    direction: "claim",
-  },
-  {
-    id: "bnpl",
-    label: "خرید اقساطی پلتفرمی (BNPL)",
-    description: "اقساط اسنپ‌پی، دیجی‌پی، ازکی‌وام، تارا و ...",
-    icon: CreditCard,
-    defaultRate: "0.0",
-    defaultTerm: "4",
-    isFriend: false,
-    direction: "debt",
-  },
-  {
-    id: "personal_loan",
-    label: "وام شخصی / صندوق خانوادگی",
-    description: "صندوق‌های وام خانگی و قرض‌الحسنه کارمندی",
-    icon: Users,
-    defaultRate: "4.0",
-    defaultTerm: "12",
-    isFriend: false,
-    direction: "debt",
-  },
-  {
-    id: "mortgage",
-    label: "وام مسکن",
-    description: "تسهیلات خرید یا ودیعه مسکن و جعاله",
-    icon: Building,
-    defaultRate: "23.0",
-    defaultTerm: "60",
-    isFriend: false,
-    direction: "debt",
-  },
-  {
-    id: "auto_loan",
-    label: "وام خودرو",
-    description: "تسهیلات لیزینگ یا خرید خودرو",
-    icon: CreditCard,
-    defaultRate: "23.0",
-    defaultTerm: "36",
-    isFriend: false,
-    direction: "debt",
-  },
-  {
-    id: "student_loan",
-    label: "وام تحصیلی",
-    description: "تسهیلات دانشجویی و صندوق رفاه دانشجویان",
-    icon: GraduationCap,
-    defaultRate: "4.0",
-    defaultTerm: "36",
-    isFriend: false,
-    direction: "debt",
-  },
-  {
-    id: "credit_card",
-    label: "کارت اعتباری",
-    description: "اعتبار کارت بانکی با دوره تنفس یا بازپرداخت اقساطی",
-    icon: CreditCard,
-    defaultRate: "18.0",
-    defaultTerm: "12",
-    isFriend: false,
-    direction: "debt",
-  },
-  {
-    id: "other",
-    label: "سایر بدهی‌ها و تعهدات",
-    description: "چک‌های صادره، بدهی بازار، تعهدات غیربانکی",
-    icon: AlertCircle,
-    defaultRate: "0.0",
-    defaultTerm: "6",
-    isFriend: false,
-    direction: "debt",
-  },
-];
-
-const DEFAULT_LIABILITY_LABELS: Record<string, string> = {
-  bank_loan: "وام بانکی",
-  personal_loan: "وام شخصی / صندوق",
-  friend_borrowed: "قرض گرفته‌شده از دوست (بدهی)",
-  friend_lent: "قرض داده‌شده به دوست (طلب)",
-  bnpl: "خرید اقساطی پلتفرمی",
-  mortgage: "وام مسکن",
-  auto_loan: "وام خودرو",
-  student_loan: "وام تحصیلی",
-  credit_card: "کارت اعتباری",
-  other: "سایر تعهدات",
-};
-
 export default function LiabilitiesPage() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"loans" | "new_liability" | "calculator">("loans");
+  const [activeTab, setActiveTab] = useState<
+    "loans" | "new_liability" | "calculator"
+  >("loans");
   const [filterType, setFilterType] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedLiability, setSelectedLiability] = useState<Liability | null>(null);
+  const [selectedLiability, setSelectedLiability] = useState<Liability | null>(
+    null,
+  );
   const { formatMoney } = useCurrency();
   const { platforms } = useUserPlatforms();
 
@@ -170,9 +58,7 @@ export default function LiabilitiesPage() {
   });
 
   const liabilityTypes = useMemo(() => {
-    if (!backendLiabilityTypes || backendLiabilityTypes.length === 0) {
-      return DEFAULT_LIABILITY_TYPES;
-    }
+    if (!backendLiabilityTypes) return [];
     return backendLiabilityTypes.map((t) => ({
       id: t.code,
       label: t.label,
@@ -186,7 +72,7 @@ export default function LiabilitiesPage() {
   }, [backendLiabilityTypes]);
 
   const liabilityLabels = useMemo(() => {
-    const map: Record<string, string> = { ...DEFAULT_LIABILITY_LABELS };
+    const map: Record<string, string> = {};
     if (backendLiabilityTypes) {
       backendLiabilityTypes.forEach((t) => {
         map[t.code.toLowerCase()] = t.short_label || t.label;
@@ -205,7 +91,9 @@ export default function LiabilitiesPage() {
   const [interestRate, setInterestRate] = useState("18.0");
   const [termMonths, setTermMonths] = useState("24");
   const [monthlyPayment, setMonthlyPayment] = useState("");
-  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [startDate, setStartDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [notes, setNotes] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -221,7 +109,10 @@ export default function LiabilitiesPage() {
 
   const activeSelectedLiability = useMemo(() => {
     if (!selectedLiability || !liabilities) return selectedLiability;
-    return liabilities.find((l) => l.id === selectedLiability.id) || selectedLiability;
+    return (
+      liabilities.find((l) => l.id === selectedLiability.id) ||
+      selectedLiability
+    );
   }, [selectedLiability, liabilities]);
 
   const { data: schedule } = useQuery({
@@ -230,7 +121,7 @@ export default function LiabilitiesPage() {
       api.calculateAmortization(
         parseFloat(calcPrincipal) || 1000,
         parseFloat(calcRate) || 1,
-        parseInt(calcTerm) || 12
+        parseInt(calcTerm) || 12,
       ),
     enabled: activeTab === "calculator" && parseFloat(calcPrincipal) > 0,
   });
@@ -271,19 +162,24 @@ export default function LiabilitiesPage() {
   const createMutation = useMutation({
     mutationFn: async () => {
       setFormError(null);
-      if (!name.trim()) throw new Error("لطفاً عنوان یا نام وام / بدهی را وارد کنید.");
+      if (!name.trim())
+        throw new Error("لطفاً عنوان یا نام وام / بدهی را وارد کنید.");
       const p = parseFloat(originalPrincipal);
-      if (isNaN(p) || p <= 0) throw new Error("لطفاً مبلغ اصل بدهی یا وام را به تومان وارد کنید.");
+      if (isNaN(p) || p <= 0)
+        throw new Error("لطفاً مبلغ اصل بدهی یا وام را به تومان وارد کنید.");
 
       const lenderName = isCustomLender
         ? customLender.trim()
         : selectedPlatform || (platforms.length > 0 ? platforms[0] : "بانک");
 
-      if (!lenderName) throw new Error("لطفاً نام بانک، پلتفرم یا شخص طرف حساب را مشخص کنید.");
+      if (!lenderName)
+        throw new Error("لطفاً نام بانک، پلتفرم یا شخص طرف حساب را مشخص کنید.");
 
       const finalRate = parseFloat(interestRate) || 0;
       const finalTerm = parseInt(termMonths) || 12;
-      const finalPayment = monthlyPayment ? parseFloat(monthlyPayment) : parseFloat(autoMonthlyPayment) || 0;
+      const finalPayment = monthlyPayment
+        ? parseFloat(monthlyPayment)
+        : parseFloat(autoMonthlyPayment) || 0;
 
       const payload = {
         name: name.trim(),
@@ -327,44 +223,63 @@ export default function LiabilitiesPage() {
   });
 
   // Aggregated Metrics
-  const { totalDebts, totalClaims, totalMonthlyCommitment, avgRate } = useMemo(() => {
-    if (!liabilities) return { totalDebts: 0, totalClaims: 0, totalMonthlyCommitment: 0, avgRate: 0 };
+  const { totalDebts, totalClaims, totalMonthlyCommitment, avgRate } =
+    useMemo(() => {
+      if (!liabilities)
+        return {
+          totalDebts: 0,
+          totalClaims: 0,
+          totalMonthlyCommitment: 0,
+          avgRate: 0,
+        };
 
-    let debts = 0;
-    let claims = 0;
-    let monthly = 0;
-    let weightedRateSum = 0;
+      let debts = 0;
+      let claims = 0;
+      let monthly = 0;
+      let weightedRateSum = 0;
 
-    liabilities.forEach((l) => {
-      const bal = parseFloat(l.current_balance) || 0;
-      const pay = parseFloat(l.monthly_payment) || 0;
-      const rate = parseFloat(l.interest_rate_percent) || 0;
+      liabilities.forEach((l) => {
+        const bal = parseFloat(l.current_balance) || 0;
+        const pay = parseFloat(l.monthly_payment) || 0;
+        const rate = parseFloat(l.interest_rate_percent) || 0;
 
-      if (l.liability_type === "friend_lent") {
-        claims += bal;
-      } else {
-        debts += bal;
-        monthly += pay;
-        weightedRateSum += rate * bal;
-      }
-    });
+        if (l.liability_type === "friend_lent") {
+          claims += bal;
+        } else {
+          debts += bal;
+          monthly += pay;
+          weightedRateSum += rate * bal;
+        }
+      });
 
-    const avg = debts > 0 ? (weightedRateSum / debts) : 0;
-    return {
-      totalDebts: debts,
-      totalClaims: claims,
-      totalMonthlyCommitment: monthly,
-      avgRate: avg,
-    };
-  }, [liabilities]);
+      const avg = debts > 0 ? weightedRateSum / debts : 0;
+      return {
+        totalDebts: debts,
+        totalClaims: claims,
+        totalMonthlyCommitment: monthly,
+        avgRate: avg,
+      };
+    }, [liabilities]);
 
   // Filtered List
   const filteredLiabilities = useMemo(() => {
     if (!liabilities) return [];
     if (filterType === "all") return liabilities;
-    if (filterType === "bank") return liabilities.filter((l) => l.liability_type === "bank_loan" || l.liability_type === "mortgage" || l.liability_type === "auto_loan");
-    if (filterType === "friend") return liabilities.filter((l) => l.liability_type === "friend_borrowed" || l.liability_type === "friend_lent");
-    if (filterType === "bnpl") return liabilities.filter((l) => l.liability_type === "bnpl");
+    if (filterType === "bank")
+      return liabilities.filter(
+        (l) =>
+          l.liability_type === "bank_loan" ||
+          l.liability_type === "mortgage" ||
+          l.liability_type === "auto_loan",
+      );
+    if (filterType === "friend")
+      return liabilities.filter(
+        (l) =>
+          l.liability_type === "friend_borrowed" ||
+          l.liability_type === "friend_lent",
+      );
+    if (filterType === "bnpl")
+      return liabilities.filter((l) => l.liability_type === "bnpl");
     return liabilities;
   }, [liabilities, filterType]);
 
@@ -408,7 +323,9 @@ export default function LiabilitiesPage() {
                 <div className="flex items-center justify-between mb-1.5">
                   <Icon
                     className={`h-4 w-4 ${
-                      isSelected ? "text-sky-600 dark:text-sky-400" : "text-slate-500 dark:text-slate-400"
+                      isSelected
+                        ? "text-sky-600 dark:text-sky-400"
+                        : "text-slate-500 dark:text-slate-400"
                     }`}
                   />
                   {t.isFriend && (
@@ -442,10 +359,10 @@ export default function LiabilitiesPage() {
             liabilityType === "friend_borrowed"
               ? "مثلاً قرض از علی بابت رهن آپارتمان"
               : liabilityType === "friend_lent"
-              ? "مثلاً قرض به رضا بابت راه‌اندازی کار"
-              : liabilityType === "bnpl"
-              ? "مثلاً خرید اقساطی گوشی از اسنپ‌پی"
-              : "مثلاً تسهیلات طرح امید بانک ملت"
+                ? "مثلاً قرض به رضا بابت راه‌اندازی کار"
+                : liabilityType === "bnpl"
+                  ? "مثلاً خرید اقساطی گوشی از اسنپ‌پی"
+                  : "مثلاً تسهیلات طرح امید بانک ملت"
           }
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -468,7 +385,9 @@ export default function LiabilitiesPage() {
             onClick={() => setIsCustomLender(!isCustomLender)}
             className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline"
           >
-            {isCustomLender ? "انتخاب از لیست پلتفرم‌ها" : "+ ورود نام شخص یا نام سفارشی"}
+            {isCustomLender
+              ? "انتخاب از لیست پلتفرم‌ها"
+              : "+ ورود نام شخص یا نام سفارشی"}
           </button>
         </div>
 
@@ -486,7 +405,9 @@ export default function LiabilitiesPage() {
           />
         ) : (
           <select
-            value={selectedPlatform || (platforms.length > 0 ? platforms[0] : "")}
+            value={
+              selectedPlatform || (platforms.length > 0 ? platforms[0] : "")
+            }
             onChange={(e) => setSelectedPlatform(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium"
           >
@@ -605,7 +526,9 @@ export default function LiabilitiesPage() {
             مبلغ قسط ماهانه (تومان)
           </label>
           <span className="text-[11px] text-sky-600 dark:text-sky-400 font-mono">
-            {autoMonthlyPayment ? `محاسبه خودکار: ${parseFloat(autoMonthlyPayment).toLocaleString()} تومان` : "—"}
+            {autoMonthlyPayment
+              ? `محاسبه خودکار: ${parseFloat(autoMonthlyPayment).toLocaleString()} تومان`
+              : "—"}
           </span>
         </div>
         <input
@@ -617,7 +540,9 @@ export default function LiabilitiesPage() {
           className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold font-mono text-sm"
         />
         <span className="text-[10px] text-slate-400 mt-1 block">
-          اگر خالی بگذارید، مقدار محاسبه‌شده خودکار ({parseFloat(autoMonthlyPayment || "0").toLocaleString()} تومان) ثبت خواهد شد.
+          اگر خالی بگذارید، مقدار محاسبه‌شده خودکار (
+          {parseFloat(autoMonthlyPayment || "0").toLocaleString()} تومان) ثبت
+          خواهد شد.
         </span>
       </div>
 
@@ -716,17 +641,6 @@ export default function LiabilitiesPage() {
               }`}
             >
               تعهدات و وام‌های فعال
-            </button>
-            <button
-              onClick={() => setActiveTab("new_liability")}
-              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1 ${
-                activeTab === "new_liability"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs"
-                  : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <Plus className="h-3 w-3" />
-              <span>ثبت جدید</span>
             </button>
             <button
               onClick={() => setActiveTab("calculator")}
@@ -844,14 +758,33 @@ export default function LiabilitiesPage() {
                   const m = new Date(l.maturity_date);
                   const diffMs = m.getTime() - s.getTime();
                   if (diffMs > 0) {
-                    totalMonths = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24 * 30.4375)));
+                    totalMonths = Math.max(
+                      1,
+                      Math.round(diffMs / (1000 * 60 * 60 * 24 * 30.4375)),
+                    );
                   }
                 }
                 if (totalMonths <= 0 && monthlyPay > 0 && origPrincipal > 0) {
-                  totalMonths = Math.max(1, Math.round(origPrincipal / monthlyPay));
+                  totalMonths = Math.max(
+                    1,
+                    Math.round(origPrincipal / monthlyPay),
+                  );
                 }
-                const paidMonths = totalMonths > 0 ? Math.min(totalMonths, Math.round((repaidAmt / (origPrincipal || 1)) * totalMonths)) : 0;
-                const remainMonths = totalMonths > 0 ? Math.max(0, totalMonths - paidMonths) : (monthlyPay > 0 ? Math.ceil(currBalance / monthlyPay) : 0);
+                const paidMonths =
+                  totalMonths > 0
+                    ? Math.min(
+                        totalMonths,
+                        Math.round(
+                          (repaidAmt / (origPrincipal || 1)) * totalMonths,
+                        ),
+                      )
+                    : 0;
+                const remainMonths =
+                  totalMonths > 0
+                    ? Math.max(0, totalMonths - paidMonths)
+                    : monthlyPay > 0
+                      ? Math.ceil(currBalance / monthlyPay)
+                      : 0;
 
                 return (
                   <div
@@ -861,8 +794,8 @@ export default function LiabilitiesPage() {
                       isFriendLent
                         ? "border-emerald-500/40 bg-emerald-50/10 dark:bg-emerald-950/10"
                         : isFriendBorrowed
-                        ? "border-amber-500/40 bg-amber-50/10 dark:bg-amber-950/10"
-                        : ""
+                          ? "border-amber-500/40 bg-amber-50/10 dark:bg-amber-950/10"
+                          : ""
                     }`}
                   >
                     <div className="space-y-3">
@@ -873,13 +806,16 @@ export default function LiabilitiesPage() {
                             isFriendLent
                               ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
                               : isFriendBorrowed
-                              ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                           }`}
                         >
                           {isFriendLent && <ArrowUpRight className="h-3 w-3" />}
-                          {isFriendBorrowed && <ArrowDownLeft className="h-3 w-3" />}
-                          {liabilityLabels[l.liability_type.toLowerCase()] || l.liability_type}
+                          {isFriendBorrowed && (
+                            <ArrowDownLeft className="h-3 w-3" />
+                          )}
+                          {liabilityLabels[l.liability_type.toLowerCase()] ||
+                            l.liability_type}
                         </span>
 
                         <span
@@ -887,24 +823,33 @@ export default function LiabilitiesPage() {
                             rate === 0
                               ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
                               : rate > 15
-                              ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                                ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
                           }`}
                         >
-                          {rate === 0 ? "بدون سود (۰٪)" : `${rate.toFixed(1)}% سود`}
+                          {rate === 0
+                            ? "بدون سود (۰٪)"
+                            : `${rate.toFixed(1)}% سود`}
                         </span>
                       </div>
 
                       {/* Bank Logo / Emblem & Title */}
                       <div className="flex items-center gap-3">
-                        <LenderLogo lender={l.lender} liabilityType={l.liability_type} size="md" />
+                        <LenderLogo
+                          lender={l.lender}
+                          liabilityType={l.liability_type}
+                          size="md"
+                        />
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                             {l.name}
                           </h3>
                           {l.lender ? (
                             <span className="text-[11px] text-slate-400 truncate block mt-0.5">
-                              طرف حساب: <b className="text-slate-600 dark:text-slate-300 font-semibold">{l.lender}</b>
+                              طرف حساب:{" "}
+                              <b className="text-slate-600 dark:text-slate-300 font-semibold">
+                                {l.lender}
+                              </b>
                             </span>
                           ) : (
                             <span className="text-[10px] text-sky-500 font-medium block mt-0.5">
@@ -963,7 +908,9 @@ export default function LiabilitiesPage() {
                     <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                       <div>
                         <span className="text-slate-400 block text-[10px]">
-                          {isFriendLent ? "دریافت ماهانه توافقی:" : "تعهد قسط ماهانه:"}
+                          {isFriendLent
+                            ? "دریافت ماهانه توافقی:"
+                            : "تعهد قسط ماهانه:"}
                         </span>
                         <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
                           {formatMoney(l.monthly_payment)} / ماه
@@ -977,7 +924,11 @@ export default function LiabilitiesPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm(`آیا از حذف یا تسویه کامل «${l.name}» مطمئن هستید؟`)) {
+                            if (
+                              confirm(
+                                `آیا از حذف یا تسویه کامل «${l.name}» مطمئن هستید؟`,
+                              )
+                            ) {
                               deleteMutation.mutate(l.id);
                             }
                           }}
@@ -1016,7 +967,8 @@ export default function LiabilitiesPage() {
               ثبت وام، بدهی یا قرض جدید
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              مشخصات تسهیلات، قرض‌های دوستانه یا خریدهای اقساطی خود را ثبت و اقساط آن را رصد کنید.
+              مشخصات تسهیلات، قرض‌های دوستانه یا خریدهای اقساطی خود را ثبت و
+              اقساط آن را رصد کنید.
             </p>
           </div>
           {renderLiabilityForm(false)}
@@ -1079,7 +1031,10 @@ export default function LiabilitiesPage() {
                   جدول تفکیک اقساط (۲۴ ماه نخست)
                 </h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  مبلغ هر قسط ماهانه: {schedule && schedule[0] ? formatMoney(schedule[0].payment) : "—"}
+                  مبلغ هر قسط ماهانه:{" "}
+                  {schedule && schedule[0]
+                    ? formatMoney(schedule[0].payment)
+                    : "—"}
                 </p>
               </div>
             </div>
@@ -1088,16 +1043,29 @@ export default function LiabilitiesPage() {
               <table className="w-full text-start text-xs">
                 <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 uppercase tracking-wider sticky top-0 border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="py-2.5 px-6 font-semibold text-start">ماه</th>
-                    <th className="py-2.5 px-4 font-semibold text-end">مبلغ قسط</th>
-                    <th className="py-2.5 px-4 font-semibold text-end">پرداخت اصل وام</th>
-                    <th className="py-2.5 px-4 font-semibold text-end">پرداخت سود</th>
-                    <th className="py-2.5 px-6 font-semibold text-end">مانده بدهی</th>
+                    <th className="py-2.5 px-6 font-semibold text-start">
+                      ماه
+                    </th>
+                    <th className="py-2.5 px-4 font-semibold text-end">
+                      مبلغ قسط
+                    </th>
+                    <th className="py-2.5 px-4 font-semibold text-end">
+                      پرداخت اصل وام
+                    </th>
+                    <th className="py-2.5 px-4 font-semibold text-end">
+                      پرداخت سود
+                    </th>
+                    <th className="py-2.5 px-6 font-semibold text-end">
+                      مانده بدهی
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                   {schedule?.slice(0, 36).map((row) => (
-                    <tr key={row.month} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/30">
+                    <tr
+                      key={row.month}
+                      className="hover:bg-slate-50/40 dark:hover:bg-slate-800/30"
+                    >
                       <td className="py-2.5 px-6 font-medium text-slate-800 dark:text-slate-200 font-mono">
                         ماه {row.month}
                       </td>

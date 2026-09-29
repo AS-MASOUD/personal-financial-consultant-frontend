@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BarChart3,
@@ -12,26 +12,44 @@ import {
   Check,
   Loader2,
   AlertCircle,
+  AlertTriangle,
+  Scale,
+  ShieldAlert,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatPercent } from "@/lib/utils";
 import { useCurrency } from "@/components/currency-provider";
 import { useToast } from "@/components/toast-provider";
-import { AssetPosition } from "@/types/financial";
-
-const CLASS_LABELS: Record<string, string> = {
-  ALL: "همه دارایی‌ها",
-  EQUITY: "سهام و ETF",
-  CRYPTO: "ارزهای دیجیتال",
-  COMMODITY: "طلا و کالاها",
-  FIXED_INCOME: "درآمد ثابت و اوراق",
-};
+import { useAuth } from "@/components/auth-provider";
+import { AssetClass, AssetPosition } from "@/types/financial";
+import { calculatePortfolioAllocationCompliance } from "@/lib/allocation-utils";
+import { CustomAllocationModal } from "@/components/financial/custom-allocation-modal";
 
 export default function PortfolioPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedClass, setSelectedClass] = useState<string>("ALL");
+  const [showCustomAllocModal, setShowCustomAllocModal] = useState(false);
   const { formatMoney } = useCurrency();
+
+  // Fetch asset class definitions from backend
+  const { data: assetClasses } = useQuery({
+    queryKey: ["asset-classes"],
+    queryFn: () => api.getAssetClasses(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Derive the labels map (uppercase keys) with an "ALL" entry
+  const CLASS_LABELS: Record<string, string> = useMemo(() => {
+    const labels: Record<string, string> = { ALL: "همه دارایی‌ها" };
+    if (assetClasses) {
+      for (const c of assetClasses) {
+        labels[c.code.toUpperCase()] = c.label;
+      }
+    }
+    return labels;
+  }, [assetClasses]);
 
   const [editingPosition, setEditingPosition] = useState<AssetPosition | null>(null);
   const [editQuantity, setEditQuantity] = useState<string>("");
@@ -113,7 +131,11 @@ export default function PortfolioPage() {
     return positions.reduce((sum, p) => sum + parseFloat(p.unrealized_pnl), 0);
   }, [positions]);
 
-  const assetClasses = ["ALL", "EQUITY", "CRYPTO", "COMMODITY", "FIXED_INCOME"];
+  const compliance = useMemo(() => {
+    return calculatePortfolioAllocationCompliance(positions, user?.portfolio_suggestion);
+  }, [positions, user?.portfolio_suggestion]);
+
+  const filterTabs = Object.keys(CLASS_LABELS);
 
   if (isLoading) {
     return (
@@ -180,23 +202,72 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Asset Class Filter Tabs */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs font-semibold">
-          {assetClasses.map((cls) => (
-            <button
-              key={cls}
-              onClick={() => setSelectedClass(cls)}
-              className={`px-3 py-1.5 rounded-md transition-all ${
-                selectedClass === cls
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs"
-                  : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              {CLASS_LABELS[cls] || cls}
-            </button>
-          ))}
+      {/* Portfolio Risk Limitation Exceedance Warning Banner */}
+      {compliance.hasExceededCategory && (
+        <div className="rounded-2xl bg-amber-500/5 dark:bg-amber-950/10 border border-amber-500/20 p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <span>هشدار عدم انطباق پورتفوی با سقف ریسک تعیین‌شده</span>
+              </h4>
+              <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                برخی از طبقات دارایی پورتفوی شما از سقف درصد مجاز تعریف‌شده توسط شما فراتر رفته‌اند:{" "}
+                {compliance.exceededItems.map((item) => (
+                  <span key={item.key} className="inline-block font-bold text-amber-700 dark:text-amber-300 ms-1 font-mono">
+                    «{item.label}» ({item.actualPercent.toFixed(1)}٪ سهم فعلی | سقف: {item.targetPercent}٪ | +{item.excessPercent.toFixed(1)}٪ تخطی)
+                  </span>
+                ))}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowCustomAllocModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold shadow-xs whitespace-nowrap cursor-pointer transition-all shrink-0 flex items-center gap-1.5"
+          >
+            <Scale className="h-3.5 w-3.5" />
+            <span>تنظیم / اصلاح سقف تخصیص</span>
+          </button>
         </div>
+      )}
+
+      {/* Asset Class Filter Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs font-semibold">
+          {filterTabs.map((cls) => {
+            const matchedCat = compliance.items.find(
+              (i) =>
+                i.key === cls.toLowerCase() ||
+                (cls.toLowerCase() === "equity" && i.key === "equities") ||
+                (cls.toLowerCase() === "commodity" && i.key === "gold")
+            );
+            const isExceeded = matchedCat?.isExceeded;
+            return (
+              <button
+                key={cls}
+                onClick={() => setSelectedClass(cls)}
+                className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
+                  selectedClass === cls
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <span>{CLASS_LABELS[cls] || cls}</span>
+                {isExceeded && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => setShowCustomAllocModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 text-xs font-bold transition-all cursor-pointer"
+        >
+          <Scale className="h-3.5 w-3.5" />
+          <span>تنظیم درصد تخصیص هدف پورتفوی</span>
+        </button>
       </div>
 
       {/* Detailed Holdings Table */}
@@ -243,6 +314,13 @@ export default function PortfolioPage() {
                   const pnlPct = parseFloat(pos.unrealized_pnl_percent);
                   const isPositive = pnl >= 0;
 
+                  const isPosExceeded = compliance.exceededItems.some(
+                    (item) =>
+                      item.key === pos.asset_class.toLowerCase() ||
+                      (pos.asset_class.toLowerCase() === "equity" && item.key === "equities") ||
+                      (pos.asset_class.toLowerCase() === "commodity" && item.key === "gold")
+                  );
+
                   return (
                     <tr
                       key={pos.id}
@@ -265,9 +343,20 @@ export default function PortfolioPage() {
                       </td>
 
                       <td className="py-3.5 px-4 text-start">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                          {CLASS_LABELS[pos.asset_class.toUpperCase()] || pos.asset_class}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            {CLASS_LABELS[pos.asset_class.toUpperCase()] || pos.asset_class}
+                          </span>
+                          {isPosExceeded && (
+                            <span
+                              className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-0.5"
+                              title="تخطی از سقف درصد مجاز ریسک تعیین شده کاربر"
+                            >
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                              <span>تخطی ریسک</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3.5 px-4 text-end font-medium text-slate-800 dark:text-slate-200 font-mono">
@@ -505,6 +594,15 @@ export default function PortfolioPage() {
           </div>
         </div>
       )}
+
+      {/* Custom Target Allocation Modal */}
+      <CustomAllocationModal
+        isOpen={showCustomAllocModal}
+        onClose={() => setShowCustomAllocModal(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["user"] });
+        }}
+      />
     </div>
   );
 }

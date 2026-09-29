@@ -11,6 +11,18 @@ export interface Account {
   updated_at: string;
 }
 
+export interface AssetClass {
+  id: string;
+  code: string;
+  label: string;
+  description?: string | null;
+  icon: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Asset {
   id: string;
   symbol: string;
@@ -170,6 +182,18 @@ export interface CashflowSummary {
     flow_type: string;
     amount: number;
   }>;
+}
+
+export interface GoalCategory {
+  id: string;
+  code: string;
+  label: string;
+  description?: string | null;
+  icon: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FinancialGoal {

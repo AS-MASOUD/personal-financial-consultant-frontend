@@ -52,6 +52,7 @@ export function WealthTrajectoryChart() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Series visibility toggles
+  const [showNetWorth, setShowNetWorth] = useState(true);
   const [showInvestments, setShowInvestments] = useState(true);
   const [showLiabilities, setShowLiabilities] = useState(true);
   const [showSalary, setShowSalary] = useState(true);
@@ -167,6 +168,25 @@ export function WealthTrajectoryChart() {
         {/* Series Visibility Toggles & Quick Stats Legend */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 py-2 px-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 text-xs">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Aggregated Net Worth toggle (Default ON) */}
+            <button
+              onClick={() => setShowNetWorth(!showNetWorth)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                showNetWorth
+                  ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-400 border border-transparent opacity-60"
+              }`}
+            >
+              <Wallet className="h-3.5 w-3.5 text-purple-500" />
+              <span>ارزش خالص (تجمیعی کل)</span>
+              <span className="font-bold text-[11px]" dir="ltr">
+                {formatMoney(
+                  Number(trajectoryData?.baseline_investments || 0) -
+                    Number(trajectoryData?.baseline_liabilities || 0)
+                )}
+              </span>
+            </button>
+
             {/* Investments toggle */}
             <button
               onClick={() => setShowInvestments(!showInvestments)}
@@ -231,7 +251,7 @@ export function WealthTrajectoryChart() {
         </div>
 
         {/* Main Chart Canvas */}
-        <div className="flex-1 w-full min-h-[250px] mt-2">
+        <div className="w-full h-[280px] sm:h-[320px] mt-2">
           {isLoading ? (
             <div className="h-full flex items-center justify-center text-xs text-slate-400 animate-pulse">
               در حال بارگذاری شبیه‌سازی مالی هوش مصنوعی...
@@ -247,6 +267,10 @@ export function WealthTrajectoryChart() {
                 margin={{ top: 10, right: 10, left: -5, bottom: 0 }}
               >
                 <defs>
+                  <linearGradient id="netWorthGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
+                  </linearGradient>
                   <linearGradient id="invConfidenceGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
@@ -316,6 +340,13 @@ export function WealthTrajectoryChart() {
                             </span>
                           </div>
 
+                          {showNetWorth && (
+                            <div className="text-purple-300 flex items-center justify-between font-bold pt-0.5 pb-1 border-b border-slate-800/80">
+                              <span>ارزش خالص (تجمیعی کل):</span>
+                              <span dir="ltr">{formatMoney(row?.raw_nw)}</span>
+                            </div>
+                          )}
+
                           {showInvestments && (
                             <div className="text-emerald-400 flex items-center justify-between font-bold">
                               <span>سرمایه‌گذاری‌ها:</span>
@@ -336,19 +367,23 @@ export function WealthTrajectoryChart() {
                               <span dir="ltr">{formatMoney(row?.raw_salary)}</span>
                             </div>
                           )}
-
-                          <div className="text-slate-300 flex items-center justify-between pt-1 border-t border-slate-800 text-[11px]">
-                            <span>ارزش خالص (Net Worth):</span>
-                            <span className="font-bold text-sky-400" dir="ltr">
-                              {formatMoney(row?.raw_nw)}
-                            </span>
-                          </div>
                         </div>
                       );
                     }
                     return null;
                   }}
                 />
+
+                {/* Aggregated Net Worth (تجمیعی کل) Area & Line */}
+                {showNetWorth && (
+                  <Area
+                    type="monotone"
+                    dataKey="net_worth"
+                    stroke="#8b5cf6"
+                    strokeWidth={3}
+                    fill="url(#netWorthGrad)"
+                  />
+                )}
 
                 {/* AI Confidence Band */}
                 {showAIPrediction && showInvestments && (
