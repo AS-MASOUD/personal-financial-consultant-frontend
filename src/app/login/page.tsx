@@ -135,7 +135,7 @@ export default function LoginPage() {
     try {
       const res = await requestOTP(cleanId);
       setOtpSent(true);
-      setCountdown(res.cooldown_seconds || 60);
+      setCountdown(res.cooldown_seconds || 120);
       setOtpChannel(res.channel);
       const successText =
         res.channel === "sms"
@@ -280,7 +280,7 @@ export default function LoginPage() {
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-6 shadow-xl shadow-slate-950/5 space-y-5">
           {/* PASSWORD MODE FORM */}
           {authMode === "password" && (
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <form noValidate onSubmit={handlePasswordSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   شماره موبایل یا ایمیل
@@ -289,7 +289,6 @@ export default function LoginPage() {
                   <Smartphone className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
                   <input
                     type="text"
-                    required
                     value={identifier}
                     onChange={(e) => {
                       const val = normalizeDigitsToEnglish(e.target.value);
@@ -314,7 +313,6 @@ export default function LoginPage() {
                   <Lock className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
                   <input
                     type="password"
-                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
@@ -354,7 +352,6 @@ export default function LoginPage() {
                     <Smartphone className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
                     <input
                       type="text"
-                      required
                       disabled={otpSent && countdown > 0}
                       value={identifier}
                       onChange={(e) => {
@@ -385,7 +382,7 @@ export default function LoginPage() {
 
               {/* Step 2: OTP Verification code (Shown once sent) */}
               {otpSent && (
-                <form onSubmit={handleVerifyOTP} className="space-y-4 pt-2">
+                <form noValidate onSubmit={handleVerifyOTP} className="space-y-4 pt-2">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -407,10 +404,13 @@ export default function LoginPage() {
                       <KeyRound className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
                       <input
                         type="text"
-                        required
-                        maxLength={8}
+                        inputMode="numeric"
+                        maxLength={5}
                         value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value)}
+                        onChange={(e) => {
+                          const clean = normalizeDigitsToEnglish(e.target.value).replace(/\D/g, "");
+                          if (clean.length <= 5) setOtpCode(clean);
+                        }}
                         placeholder="•••••"
                         dir="ltr"
                         autoFocus
@@ -440,7 +440,7 @@ export default function LoginPage() {
 
                   <button
                     type="submit"
-                    disabled={isLoading || otpCode.length < 4}
+                    disabled={isLoading || otpCode.length < 5}
                     className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-medium text-sm shadow-md shadow-sky-600/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isLoading ? (

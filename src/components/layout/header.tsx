@@ -9,25 +9,16 @@ import {
   Plus,
   RefreshCw,
   ArrowLeftRight,
-  LogOut,
   LogIn,
-  ShieldCheck,
-  Sparkles,
-  Building2,
-  UserCheck,
-  Eye,
   Bell,
   CheckCheck,
   TrendingUp,
   Award,
-  AlertTriangle,
   Info,
-  UserCircle,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrency } from "@/components/currency-provider";
 import { useAuth } from "@/components/auth-provider";
-import { SystemRole } from "@/types/auth";
 import { api } from "@/lib/api";
 
 interface HeaderProps {
@@ -38,7 +29,11 @@ interface HeaderProps {
 
 const emptySubscribe = () => () => {};
 
-export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: HeaderProps) {
+export function Header({
+  title = "نمای کلی",
+  subtitle,
+  onOpenQuickTx,
+}: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const { currency, toggleCurrency } = useCurrency();
   const { user, isAuthenticated, logout, isSysManager, isAdmin } = useAuth();
@@ -50,7 +45,7 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
   const mounted = React.useSyncExternalStore(
     emptySubscribe,
     () => true,
-    () => false
+    () => false,
   );
 
   // Notifications Query
@@ -87,39 +82,6 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
-  const getRoleBadge = (role: SystemRole) => {
-    switch (role) {
-      case "sysmanager":
-        return (
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-            <Sparkles className="h-2.5 w-2.5" />
-            <span>SysManager</span>
-          </span>
-        );
-      case "admin":
-        return (
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-            <Building2 className="h-2.5 w-2.5" />
-            <span>Admin</span>
-          </span>
-        );
-      case "user":
-        return (
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <UserCheck className="h-2.5 w-2.5" />
-            <span>User</span>
-          </span>
-        );
-      case "viewer":
-        return (
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/20">
-            <Eye className="h-2.5 w-2.5" />
-            <span>Viewer</span>
-          </span>
-        );
-    }
-  };
-
   const unreadCount = notifData?.unread_count || 0;
   const notificationsList = notifData?.items || [];
 
@@ -153,7 +115,9 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
           title="به‌روزرسانی داده‌های مالی"
           className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
         >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin text-sky-500" : ""}`} />
+          <RefreshCw
+            className={`h-4 w-4 ${isRefreshing ? "animate-spin text-sky-500" : ""}`}
+          />
         </button>
 
         {/* Notification Center Popover */}
@@ -203,7 +167,9 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
                     >
                       <RefreshCw
                         className={`h-3.5 w-3.5 ${
-                          checkTriggersMutation.isPending ? "animate-spin text-sky-500" : ""
+                          checkTriggersMutation.isPending
+                            ? "animate-spin text-sky-500"
+                            : ""
                         }`}
                       />
                     </button>
@@ -228,7 +194,8 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
                     </div>
                   ) : (
                     notificationsList.map((notif) => {
-                      const isVolatility = notif.notification_type === "ASSET_VOLATILITY";
+                      const isVolatility =
+                        notif.notification_type === "ASSET_VOLATILITY";
                       const isGoal = notif.notification_type === "GOAL_REACHED";
 
                       return (
@@ -275,7 +242,11 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
                                 {notif.message}
                               </p>
                               <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
-                                <span>{new Date(notif.created_at).toLocaleTimeString("fa-IR")}</span>
+                                <span>
+                                  {new Date(
+                                    notif.created_at,
+                                  ).toLocaleTimeString("fa-IR")}
+                                </span>
                                 {isVolatility && (
                                   <span className="text-amber-600 dark:text-amber-400 font-medium">
                                     توصیه: تحلیل و بازتنظیم سبد
@@ -318,7 +289,7 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-sm transition-all shadow-sky-600/20 active:scale-95"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span>ثبت تراکنش</span>
+            <span>ثبت تراکنش/دارایی جدید</span>
           </button>
         )}
 
@@ -340,60 +311,8 @@ export function Header({ title = "نمای کلی", subtitle, onOpenQuickTx }: H
                   <span className="font-semibold text-slate-800 dark:text-slate-200 leading-tight">
                     {user.full_name}
                   </span>
-                  <div className="mt-0.5">{getRoleBadge(user.role)}</div>
                 </div>
               </button>
-
-              {/* User Dropdown Menu */}
-              {isUserMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-30"
-                    onClick={() => setIsUserMenuOpen(false)}
-                  />
-                  <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-2 z-40 space-y-1 text-xs">
-                    <div className="p-2 border-b border-slate-100 dark:border-slate-800">
-                      <p className="font-semibold text-slate-900 dark:text-slate-100">
-                        {user.full_name}
-                      </p>
-                      <p className="text-[11px] text-slate-400 font-mono" dir="ltr">
-                        {user.phone_number || user.email}
-                      </p>
-                    </div>
-
-                    <Link
-                      href="/profile"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
-                    >
-                      <UserCircle className="h-4 w-4 text-sky-500" />
-                      <span>مشاهده و ویرایش پروفایل</span>
-                    </Link>
-
-                    {isSysManager && (
-                      <Link
-                        href="/users"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
-                      >
-                        <ShieldCheck className="h-4 w-4 text-purple-500" />
-                        <span>مدیریت کاربران و نقش‌ها</span>
-                      </Link>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        logout();
-                      }}
-                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 transition-colors text-right"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>خروج از حساب</span>
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           ) : (
             <Link

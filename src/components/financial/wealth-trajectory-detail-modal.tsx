@@ -37,7 +37,7 @@ interface WealthTrajectoryDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: WealthTrajectoryResponse;
-  selectedRange: "3M_6M" | "6M_1Y" | "1Y_2Y" | "5Y";
+  selectedRange?: string;
 }
 
 const LOAN_COLORS = [

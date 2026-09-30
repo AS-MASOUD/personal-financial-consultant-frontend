@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   ResponsiveContainer,
@@ -30,7 +31,7 @@ import { useCurrency } from "@/components/currency-provider";
 import { WealthTrajectoryDetailModal } from "@/components/financial/wealth-trajectory-detail-modal";
 import { WealthTrajectoryResponse } from "@/types/financial";
 
-type RangeKey = "3M_6M" | "6M_1Y" | "1Y_2Y" | "5Y";
+type RangeKey = "1M" | "3M" | "6M" | "1Y";
 
 interface RangeOption {
   key: RangeKey;
@@ -40,15 +41,35 @@ interface RangeOption {
 }
 
 const RANGE_OPTIONS: RangeOption[] = [
-  { key: "3M_6M", label: "۳م گذشته + ۶م آینده", historyDays: 90, forecastMonths: 6 },
-  { key: "6M_1Y", label: "۶م گذشته + ۱ سال آینده", historyDays: 180, forecastMonths: 12 },
-  { key: "1Y_2Y", label: "۱ سال گذشته + ۲ سال آینده", historyDays: 365, forecastMonths: 24 },
-  { key: "5Y", label: "افق ۵ ساله هوش مصنوعی", historyDays: 365, forecastMonths: 60 },
+  {
+    key: "1M",
+    label: "۱ماه",
+    historyDays: 30,
+    forecastMonths: 1,
+  },
+  {
+    key: "3M",
+    label: "۳ماه",
+    historyDays: 90,
+    forecastMonths: 3,
+  },
+  {
+    key: "6M",
+    label: "۶ماه",
+    historyDays: 180,
+    forecastMonths: 6,
+  },
+  {
+    key: "1Y",
+    label: "۱سال",
+    historyDays: 365,
+    forecastMonths: 12,
+  },
 ];
 
 export function WealthTrajectoryChart() {
   const { currency, exchangeRate, formatMoney } = useCurrency();
-  const [selectedRange, setSelectedRange] = useState<RangeKey>("6M_1Y");
+  const [selectedRange, setSelectedRange] = useState<RangeKey>("1M");
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Series visibility toggles
@@ -59,8 +80,9 @@ export function WealthTrajectoryChart() {
   const [showAIPrediction, setShowAIPrediction] = useState(true);
 
   const activeRangeConfig = useMemo(
-    () => RANGE_OPTIONS.find((r) => r.key === selectedRange) || RANGE_OPTIONS[1],
-    [selectedRange]
+    () =>
+      RANGE_OPTIONS.find((r) => r.key === selectedRange) || RANGE_OPTIONS[0],
+    [selectedRange],
   );
 
   const { data: trajectoryData, isLoading } = useQuery({
@@ -78,42 +100,47 @@ export function WealthTrajectoryChart() {
 
   const factor = currency === "USD" ? 1 / exchangeRate : 1;
 
+  const timeline = trajectoryData?.timeline;
+
   // Format data points for chart
   const formattedData = useMemo(() => {
-    if (!trajectoryData?.timeline) return [];
+    if (!timeline) return [];
 
-    return trajectoryData.timeline.map((point) => {
+    return timeline.map((point) => {
       const rawLiab = Number(point.total_liabilities) || 0;
       const rawInv = Number(point.total_investments) || 0;
       const rawSalary = Number(point.salary_income) || 0;
       const rawNw = Number(point.net_worth) || 0;
 
-      const row: Record<string, string | number | boolean | null | undefined> = {
-        date: point.date,
-        display_date: point.display_date,
-        is_forecast: point.is_forecast,
-        total_liabilities: rawLiab * factor,
-        total_investments: rawInv * factor,
-        salary_income: rawSalary * factor,
-        net_worth: rawNw * factor,
-        raw_liabilities: rawLiab,
-        raw_investments: rawInv,
-        raw_salary: rawSalary,
-        raw_nw: rawNw,
-      };
+      const row: Record<string, string | number | boolean | null | undefined> =
+        {
+          date: point.date,
+          display_date: point.display_date,
+          is_forecast: point.is_forecast,
+          total_liabilities: rawLiab * factor,
+          total_investments: rawInv * factor,
+          salary_income: rawSalary * factor,
+          net_worth: rawNw * factor,
+          raw_liabilities: rawLiab,
+          raw_investments: rawInv,
+          raw_salary: rawSalary,
+          raw_nw: rawNw,
+        };
 
       if (point.is_forecast && showAIPrediction) {
         if (point.forecast_confidence_upper != null) {
-          row.confidence_upper = Number(point.forecast_confidence_upper) * factor;
+          row.confidence_upper =
+            Number(point.forecast_confidence_upper) * factor;
         }
         if (point.forecast_confidence_lower != null) {
-          row.confidence_lower = Number(point.forecast_confidence_lower) * factor;
+          row.confidence_lower =
+            Number(point.forecast_confidence_lower) * factor;
         }
       }
 
       return row;
     });
-  }, [trajectoryData?.timeline, factor, showAIPrediction]);
+  }, [timeline, factor, showAIPrediction]);
 
   return (
     <>
@@ -125,26 +152,19 @@ export function WealthTrajectoryChart() {
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 روند استهلاک بدهی‌ها و رشد سرمایه‌گذاری (Wealth Trajectory)
               </h3>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                <Sparkles className="h-3 w-3" />
-                تخمین هوش مصنوعی
-              </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              مسیر کاهشی اقساط و بدهی‌ها در کنار رشد صعودی سود سرمایه‌گذاری‌ها و جریان حقوق
-            </p>
           </div>
 
           <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
             {/* Detail View Button */}
-            <button
-              onClick={() => setIsDetailModalOpen(true)}
+            <Link
+              href="/wealth-trajectory"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer whitespace-nowrap"
               title="مشاهده تک‌تک اقساط و دارایی‌ها"
             >
               <Layers className="h-3.5 w-3.5" />
               <span>مشاهده جزئیات تفکیکی</span>
-            </button>
+            </Link>
 
             {/* Range selector */}
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
@@ -182,7 +202,7 @@ export function WealthTrajectoryChart() {
               <span className="font-bold text-[11px]" dir="ltr">
                 {formatMoney(
                   Number(trajectoryData?.baseline_investments || 0) -
-                    Number(trajectoryData?.baseline_liabilities || 0)
+                    Number(trajectoryData?.baseline_liabilities || 0),
                 )}
               </span>
             </button>
@@ -271,7 +291,13 @@ export function WealthTrajectoryChart() {
                     <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
                     <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
                   </linearGradient>
-                  <linearGradient id="invConfidenceGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="invConfidenceGrad"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                   </linearGradient>
@@ -350,21 +376,27 @@ export function WealthTrajectoryChart() {
                           {showInvestments && (
                             <div className="text-emerald-400 flex items-center justify-between font-bold">
                               <span>سرمایه‌گذاری‌ها:</span>
-                              <span dir="ltr">{formatMoney(row?.raw_investments)}</span>
+                              <span dir="ltr">
+                                {formatMoney(row?.raw_investments)}
+                              </span>
                             </div>
                           )}
 
                           {showLiabilities && (
                             <div className="text-rose-400 flex items-center justify-between font-bold">
                               <span>بدهی‌ها و اقساط:</span>
-                              <span dir="ltr">{formatMoney(row?.raw_liabilities)}</span>
+                              <span dir="ltr">
+                                {formatMoney(row?.raw_liabilities)}
+                              </span>
                             </div>
                           )}
 
                           {showSalary && (
                             <div className="text-sky-300 flex items-center justify-between">
                               <span>حقوق ماهانه:</span>
-                              <span dir="ltr">{formatMoney(row?.raw_salary)}</span>
+                              <span dir="ltr">
+                                {formatMoney(row?.raw_salary)}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -449,20 +481,23 @@ export function WealthTrajectoryChart() {
             <Percent className="h-4 w-4 text-emerald-500 shrink-0" />
             <span>
               سود مرکب پیش‌بینی‌شده:{" "}
-              <strong className="text-emerald-600 dark:text-emerald-400 font-bold" dir="ltr">
+              <strong
+                className="text-emerald-600 dark:text-emerald-400 font-bold"
+                dir="ltr"
+              >
                 +{formatMoney(trajectoryData?.projected_total_profit)}
               </strong>
             </span>
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-2 text-slate-600 dark:text-slate-400">
-            <button
-              onClick={() => setIsDetailModalOpen(true)}
+            <Link
+              href="/wealth-trajectory"
               className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
             >
               <span>مشاهده ریز محاسبات و جدول تفکیکی</span>
               <span aria-hidden="true">&larr;</span>
-            </button>
+            </Link>
           </div>
         </div>
       </div>

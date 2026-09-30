@@ -19,6 +19,7 @@ import {
   Wallet,
   ShieldCheck,
   UserCircle,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
@@ -26,6 +27,7 @@ import { useAuth } from "@/components/auth-provider";
 const navigationItems = [
   { name: "نمای کلی", href: "/", icon: LayoutDashboard },
   { name: "سبد دارایی (پورتفولیو)", href: "/portfolio", icon: PieChart },
+  { name: "مسیر ثروت (Trajectory)", href: "/wealth-trajectory", icon: Layers },
   { name: "دفتر کل تراکنش‌ها", href: "/transactions", icon: ArrowLeftRight },
   { name: "بدهی‌ها و تسهیلات", href: "/liabilities", icon: ShieldAlert },
   { name: "جریان نقدینگی و بودجه", href: "/cashflow", icon: ArrowDownUp },
@@ -49,9 +51,9 @@ export function Sidebar() {
   const { isSysManager } = useAuth();
 
   return (
-    <aside className="w-64 border-l border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md flex flex-col shrink-0 min-h-screen">
+    <aside className="w-64 border-l border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md flex flex-col shrink-0 sticky top-0 h-screen z-30">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 gap-3 border-b border-slate-200 dark:border-slate-800">
+      <div className="h-16 flex items-center px-6 gap-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
         <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center shadow-md shadow-indigo-500/20 text-white">
           <Wallet className="h-5 w-5" />
         </div>
@@ -118,7 +120,7 @@ export function Sidebar() {
       </nav>
 
       {/* Live Sync Status */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+      <div className="p-4 border-t border-slate-200 dark:border-slate-800 shrink-0">
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
